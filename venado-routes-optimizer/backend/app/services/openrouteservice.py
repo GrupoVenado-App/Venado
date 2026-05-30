@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
@@ -58,6 +59,41 @@ def get_ors_matrix(locations_lng_lat: list[tuple[float, float]]) -> MatrixResult
         ],
         source="ORS",
     )
+
+
+def get_ors_route_geometry(waypoints_lng_lat: list[tuple[float, float]]) -> list[list[float]] | None:
+    """Call ORS Directions API and return the actual road geometry as [[lng, lat], ...] coordinates.
+    Returns None if ORS is not configured or the call fails.
+    Falls back gracefully so the caller can use straight lines.
+    """
+    if not settings.ors_api_key or len(waypoints_lng_lat) < 2:
+        return None
+
+    # ORS accepts max 50 waypoints per directions request
+    if len(waypoints_lng_lat) > 50:
+        waypoints_lng_lat = waypoints_lng_lat[:50]
+
+    url = "https://api.openrouteservice.org/v2/directions/driving-car/geojson"
+    payload: dict[str, Any] = {
+        "coordinates": [[lng, lat] for lng, lat in waypoints_lng_lat],
+        "instructions": False,
+    }
+    headers = {
+        "Authorization": settings.ors_api_key,
+        "Content-Type": "application/json",
+    }
+    try:
+        with httpx.Client(timeout=30) as client:
+            response = client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+        features = data.get("features", [])
+        if not features:
+            return None
+        coords = features[0]["geometry"]["coordinates"]
+        return coords  # list of [lng, lat]
+    except Exception:
+        return None
 
 
 def estimate_leg(origin_lng: float, origin_lat: float, dest_lng: float, dest_lat: float) -> dict:

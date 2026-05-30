@@ -26,8 +26,11 @@ export function TarjetaPDV({ visita }: { visita: Visita }) {
         <span className="inline-flex items-center gap-2">
           <Clock size={16} /> {visita.pdv.tiempo_visita_estimado_min} min
         </span>
-        <span className="inline-flex items-center gap-2">
-          <MapPinned size={16} /> {visita.distancia_desde_anterior_km ?? 0} km
+        <span className="inline-flex items-center gap-2" title="Distancia desde el PDV anterior en la ruta planificada">
+          <MapPinned size={16} />
+          {visita.distancia_desde_anterior_km != null
+            ? `${visita.distancia_desde_anterior_km.toFixed(1)} km al PDV ant.`
+            : "— km"}
         </span>
       </div>
 

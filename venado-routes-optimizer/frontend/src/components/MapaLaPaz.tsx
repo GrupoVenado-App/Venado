@@ -9,11 +9,13 @@ interface Props {
   pdvs?: FeatureCollection | null;
   rutas?: FeatureCollection | null;
   currentLocation?: { latitud: number; longitud: number } | null;
+  /** ORS road geometry from currentLocation → target PDV as [[lng, lat], ...] */
+  navRoute?: [number, number][] | null;
   heightClass?: string;
   zoom?: number;
 }
 
-export function MapaLaPaz({ pdvs, rutas, currentLocation, heightClass = "h-[560px]", zoom = 13 }: Props) {
+export function MapaLaPaz({ pdvs, rutas, currentLocation, navRoute, heightClass = "h-[560px]", zoom = 13 }: Props) {
   return (
     <div className={`${heightClass} overflow-hidden rounded-md border border-slate-200 bg-white`}>
       <MapContainer center={center} zoom={zoom} scrollWheelZoom>
@@ -22,6 +24,7 @@ export function MapaLaPaz({ pdvs, rutas, currentLocation, heightClass = "h-[560p
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        {/* Route lines (supervisor view) */}
         {rutas?.features.map((feature, index) => {
           if (feature.geometry.type !== "LineString") return null;
           const coords = feature.geometry.coordinates as Array<[number, number]>;
@@ -34,6 +37,15 @@ export function MapaLaPaz({ pdvs, rutas, currentLocation, heightClass = "h-[560p
           );
         })}
 
+        {/* Live navigation route: currentLocation → PDV (dashed blue) */}
+        {navRoute && navRoute.length >= 2 && (
+          <Polyline
+            pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.85, dashArray: "10 8" }}
+            positions={navRoute.map(([lng, lat]) => [lat, lng])}
+          />
+        )}
+
+        {/* PDV markers */}
         {pdvs?.features.map((feature) => {
           if (feature.geometry.type !== "Point") return null;
           const [lng, lat] = feature.geometry.coordinates as [number, number];
@@ -57,13 +69,14 @@ export function MapaLaPaz({ pdvs, rutas, currentLocation, heightClass = "h-[560p
           );
         })}
 
+        {/* Current location marker (pulsing blue) */}
         {currentLocation ? (
           <CircleMarker
             center={[currentLocation.latitud, currentLocation.longitud]}
             radius={8}
             pathOptions={{ color: "#0f172a", weight: 2, fillColor: "#38bdf8", fillOpacity: 0.9 }}
           >
-            <Popup>Ubicacion actual</Popup>
+            <Popup>Ubicación actual</Popup>
           </CircleMarker>
         ) : null}
       </MapContainer>

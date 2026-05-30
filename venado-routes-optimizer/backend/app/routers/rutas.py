@@ -1,7 +1,7 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_role
@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models import Reponedor, Ruta, Visita
 from app.schemas import OptimizarRequest
 from app.services.optimizador import optimizar_rutas
+from app.services.openrouteservice import get_ors_route_geometry
 
 
 router = APIRouter(prefix="/rutas", tags=["rutas"])
@@ -128,6 +129,30 @@ def list_rutas(
     return [serialize_ruta(ruta) for ruta in query.order_by(Ruta.fecha.desc(), Ruta.created_at.desc()).limit(200).all()]
 
 
+@router.get("/geometria-punto-a-punto")
+def geometria_punto_a_punto(
+    olat: float = Query(..., description="Latitud origen"),
+    olng: float = Query(..., description="Longitud origen"),
+    dlat: float = Query(..., description="Latitud destino"),
+    dlng: float = Query(..., description="Longitud destino"),
+    _user=Depends(require_role("supervisor", "reponedor")),
+) -> dict:
+    """Return ORS road geometry from an arbitrary origin to a destination.
+    Used to draw the live navigation route from the reponedor's current location.
+    """
+    road_coords = get_ors_route_geometry([(olng, olat), (dlng, dlat)])
+    coords = road_coords if road_coords else [[olng, olat], [dlng, dlat]]
+    # Also compute estimated travel time
+    from app.services.openrouteservice import estimate_leg
+    leg = estimate_leg(olng, olat, dlng, dlat)
+    return {
+        "ors_geometry": road_coords is not None,
+        "geometry": {"type": "LineString", "coordinates": coords},
+        "distancia_km": leg["distancia_km"],
+        "duracion_min": leg["duracion_min"],
+    }
+
+
 @router.get("/{ruta_id}")
 def get_ruta(
     ruta_id: UUID,
@@ -143,3 +168,31 @@ def get_ruta(
     if not ruta:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     return serialize_ruta(ruta)
+
+
+@router.get("/{ruta_id}/geometria")
+def geometria_ruta(
+    ruta_id: UUID,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("supervisor", "reponedor")),
+) -> dict:
+    """Return the ORS road geometry (GeoJSON) for a specific route.
+    Falls back to straight-line coordinates if ORS is unavailable.
+    """
+    ruta = (
+        db.query(Ruta)
+        .options(joinedload(Ruta.visitas).joinedload(Visita.pdv))
+        .filter(Ruta.id == ruta_id)
+        .one_or_none()
+    )
+    if not ruta:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+    ordered = sorted(ruta.visitas, key=lambda v: v.orden_planificado)
+    waypoints = [(v.pdv.longitud, v.pdv.latitud) for v in ordered]
+    road_coords = get_ors_route_geometry(waypoints)
+    coords = road_coords if road_coords else [[lng, lat] for lng, lat in waypoints]
+    return {
+        "ruta_id": str(ruta_id),
+        "ors_geometry": road_coords is not None,
+        "geometry": {"type": "LineString", "coordinates": coords},
+    }

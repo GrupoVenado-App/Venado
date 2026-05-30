@@ -1,4 +1,4 @@
-import { CalendarDays, Clock, ListChecks, MapPinned } from "lucide-react";
+import { CalendarDays, Clock, ListChecks, MapPinned, Navigation } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
@@ -6,17 +6,48 @@ import { MapaLaPaz } from "../components/MapaLaPaz";
 import { useGlobalFecha } from "../hooks/useGlobalFecha";
 import { FeatureCollection, Ruta } from "../types";
 
+interface GeometriaResponse {
+  ruta_id: string;
+  ors_geometry: boolean;
+  geometry: { type: string; coordinates: number[][] };
+}
+
 export function RutaMapaPage() {
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
   const [fecha, setFecha] = useGlobalFecha();
+  // Map of ruta_id → road geometry coordinates from ORS
+  const [rutasGeometria, setRutasGeometria] = useState<Record<string, number[][]>>({});
+  const [loadingGeo, setLoadingGeo] = useState(false);
 
   useEffect(() => {
     const params = fecha ? { fecha } : {};
     setLoading(true);
+    setRutasGeometria({});
     api
       .get<Ruta[]>("/rutas/mis-rutas", { params })
-      .then(({ data }) => setRutas(data))
+      .then(({ data }) => {
+        setRutas(data);
+        // Fetch ORS road geometry for each route
+        if (data.length > 0) {
+          setLoadingGeo(true);
+          Promise.all(
+            data.map((ruta) =>
+              api
+                .get<GeometriaResponse>(`/rutas/${ruta.id}/geometria`)
+                .then(({ data: geo }) => ({ id: ruta.id, coords: geo.geometry.coordinates }))
+                .catch(() => ({ id: ruta.id, coords: null }))
+            )
+          ).then((results) => {
+            const map: Record<string, number[][]> = {};
+            results.forEach(({ id, coords }) => {
+              if (coords) map[id] = coords;
+            });
+            setRutasGeometria(map);
+            setLoadingGeo(false);
+          });
+        }
+      })
       .finally(() => setLoading(false));
   }, [fecha]);
 
@@ -41,20 +72,28 @@ export function RutaMapaPage() {
 
     const rutasGeo: FeatureCollection = {
       type: "FeatureCollection",
-      features: rutas.map((ruta) => ({
-        type: "Feature",
-        geometry: {
-          type: "LineString",
-          coordinates: [...ruta.visitas]
-            .sort((a, b) => a.orden_planificado - b.orden_planificado)
-            .map((visita) => [visita.pdv.longitud, visita.pdv.latitud] as [number, number]),
-        },
-        properties: { ruta_id: ruta.id, reponedor: ruta.reponedor?.nombre || "" },
-      })),
+      features: rutas.map((ruta) => {
+        // Use real road geometry from ORS if available, else fall back to straight line
+        const roadCoords = rutasGeometria[ruta.id];
+        const coords = roadCoords
+          ? roadCoords
+          : [...ruta.visitas]
+              .sort((a, b) => a.orden_planificado - b.orden_planificado)
+              .map((visita) => [visita.pdv.longitud, visita.pdv.latitud] as [number, number]);
+        return {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: coords },
+          properties: {
+            ruta_id: ruta.id,
+            reponedor: ruta.reponedor?.nombre || "",
+            ors_geometry: !!roadCoords,
+          },
+        };
+      }),
     };
 
     return { pdvs, rutas: rutasGeo };
-  }, [rutas, visitas]);
+  }, [rutas, visitas, rutasGeometria]);
 
   const totals = {
     km: rutas.reduce((sum, ruta) => sum + ruta.distancia_total_km, 0),
@@ -71,15 +110,15 @@ export function RutaMapaPage() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold uppercase text-slate-500">
-              Ruta del {fecha ? new Date(fecha).toLocaleDateString() : "Día"}
+              Ruta del {fecha ? new Date(fecha + "T12:00:00").toLocaleDateString() : "Día"}
             </p>
             <h2 className="mt-1 text-2xl font-bold text-ink">{visitas.length} PDVs ordenados</h2>
           </div>
           <div className="flex items-center gap-3">
-            <input 
-              type="date" 
-              value={fecha} 
-              onChange={(event) => setFecha(event.target.value)} 
+            <input
+              type="date"
+              value={fecha}
+              onChange={(event) => setFecha(event.target.value)}
               className="h-10 rounded-md border border-slate-300 px-3 text-sm"
               title="Seleccionar otra fecha"
             />
@@ -94,6 +133,12 @@ export function RutaMapaPage() {
             <Clock size={16} /> {totals.min} min
           </span>
         </div>
+        {loadingGeo && (
+          <p className="mt-2 flex items-center gap-1 text-xs text-slate-400">
+            <Navigation size={12} className="animate-pulse text-venado" />
+            Calculando ruta por calles...
+          </p>
+        )}
       </section>
 
       {visitas.length ? (

@@ -89,6 +89,8 @@ class OptimizarRequest(BaseModel):
 class LocationIn(BaseModel):
     latitud: float
     longitud: float
+    tiempo_traslado_real_min: int | None = None  # from chronometer or simulation
+    simular: bool = False  # True when using Simular button
 
 
 class FotoIn(BaseModel):

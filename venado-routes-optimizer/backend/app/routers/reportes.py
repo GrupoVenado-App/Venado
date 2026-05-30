@@ -34,41 +34,75 @@ def exportar_bi(
     writer = csv.writer(output)
     writer.writerow(
         [
+            # Identificación
             "fecha",
             "reponedor",
             "supervisor",
             "mercado",
             "pdv",
             "tipo_cliente",
-            "micro_tareas",
-            "tiempos_reales",
+            "orden_visita",
+            "estado_visita",
+            # Tiempos de traslado
+            "hora_inicio_traslado",
+            "hora_fin_traslado",
+            "tiempo_traslado_real_min",
+            "ors_tiempo_traslado_desde_anterior_min",
             "distancia_desde_anterior_km",
             "ors_distancia_desde_anterior_km",
-            "ors_tiempo_traslado_desde_anterior_min",
+            "fuente_calculo_traslado",
+            # Tiempos de visita
+            "hora_inicio_visita",
+            "hora_fin_visita",
+            "tiempo_ejecucion_real_min",
+            "tiempo_visita_estimado_min",
+            # Micro-tareas
+            "micro_tareas_completadas",
+            "micro_tareas_detalle",
+            "tiempos_reales_micro_tareas",
+            # Geografía
             "latitud",
             "longitud",
-            "estado",
         ]
     )
     for visita in visitas:
-        tareas = "; ".join(item.micro_tarea.nombre for item in visita.ejecuciones)
-        tiempos = "; ".join(str(item.tiempo_real_min or "") for item in visita.ejecuciones)
+        tareas_completadas = sum(1 for e in visita.ejecuciones if e.completada)
+        tareas_detalle = "; ".join(
+            f"{e.micro_tarea.nombre}({e.tiempo_real_min or '?'}min)" for e in visita.ejecuciones
+        )
+        tiempos_reales = "; ".join(str(e.tiempo_real_min or "") for e in visita.ejecuciones)
+
         writer.writerow(
             [
+                # Identificación
                 visita.ruta.fecha.isoformat(),
                 visita.ruta.reponedor.nombre,
                 visita.ruta.reponedor.supervisor,
                 visita.pdv.mercado,
                 visita.pdv.codigo,
                 visita.pdv.tipo_cliente.value,
-                tareas,
-                tiempos,
-                visita.distancia_desde_anterior_km,
-                visita.ors_distancia_desde_anterior_km,
-                visita.ors_tiempo_traslado_desde_anterior_min,
+                visita.orden_planificado,
+                visita.estado.value,
+                # Tiempos de traslado
+                visita.hora_inicio_traslado.isoformat() if visita.hora_inicio_traslado else "",
+                visita.hora_fin_traslado.isoformat() if visita.hora_fin_traslado else "",
+                visita.tiempo_traslado_real_min if visita.tiempo_traslado_real_min is not None else "",
+                visita.ors_tiempo_traslado_desde_anterior_min if visita.ors_tiempo_traslado_desde_anterior_min is not None else "",
+                round(visita.distancia_desde_anterior_km, 3) if visita.distancia_desde_anterior_km is not None else "",
+                round(visita.ors_distancia_desde_anterior_km, 3) if visita.ors_distancia_desde_anterior_km is not None else "",
+                visita.traslado_fuente,
+                # Tiempos de visita
+                visita.hora_inicio_real.isoformat() if visita.hora_inicio_real else "",
+                visita.hora_fin_real.isoformat() if visita.hora_fin_real else "",
+                visita.tiempo_ejecucion_min if visita.tiempo_ejecucion_min is not None else "",
+                visita.pdv.tiempo_visita_estimado_min,
+                # Micro-tareas
+                tareas_completadas,
+                tareas_detalle,
+                tiempos_reales,
+                # Geografía
                 visita.pdv.latitud,
                 visita.pdv.longitud,
-                visita.estado.value,
             ]
         )
     output.seek(0)

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.auth import require_role
 from app.database import get_db
 from app.models import PDV, Reponedor, Ruta, RutaEstado, Visita, VisitaEstado
+from app.services.openrouteservice import get_ors_route_geometry
 
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -132,11 +133,19 @@ def cobertura_mapa(
     lines = []
     for ruta in {visita.ruta for visita in visitas}:
         ordered = sorted(ruta.visitas, key=lambda item: item.orden_planificado)
+        waypoints = [(v.pdv.longitud, v.pdv.latitud) for v in ordered]
+        road_coords = get_ors_route_geometry(waypoints)
+        # Fallback to straight-line coordinates if ORS is unavailable
+        line_coords = road_coords if road_coords else [[lng, lat] for lng, lat in waypoints]
         lines.append(
             {
                 "type": "Feature",
-                "geometry": {"type": "LineString", "coordinates": [[v.pdv.longitud, v.pdv.latitud] for v in ordered]},
-                "properties": {"ruta_id": str(ruta.id), "reponedor": ruta.reponedor.nombre},
+                "geometry": {"type": "LineString", "coordinates": line_coords},
+                "properties": {
+                    "ruta_id": str(ruta.id),
+                    "reponedor": ruta.reponedor.nombre,
+                    "ors_geometry": road_coords is not None,
+                },
             }
         )
     return {"pdvs": {"type": "FeatureCollection", "features": features}, "rutas": {"type": "FeatureCollection", "features": lines}}

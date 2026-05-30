@@ -2,15 +2,16 @@ import math
 from datetime import UTC, date, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_role
 from app.database import get_db
-from app.models import EjecucionMicroTarea, HistorialTiempo, MicroTarea, RutaEstado, Visita, VisitaEstado
+from app.models import EjecucionMicroTarea, HistorialTiempo, MicroTarea, Ruta, RutaEstado, Visita, VisitaEstado
 from app.schemas import LocationIn
-from app.services.geocalc import haversine_meters, point_from_lng_lat
+from app.services.geocalc import DEPOT_LAT, DEPOT_LNG, haversine_meters, point_from_lng_lat
+from app.services.openrouteservice import estimate_leg, get_ors_route_geometry
 
 
 router = APIRouter(prefix="/visitas", tags=["visitas"])
@@ -146,6 +147,11 @@ def iniciar_visita(
     visita.hora_inicio_real = now
     visita.coordenada_checkin = point_from_lng_lat(payload.longitud, payload.latitud)
     visita.estado = VisitaEstado.EN_PROGRESO
+    # Save travel time from chronometer or simulation
+    if payload.tiempo_traslado_real_min is not None:
+        visita.tiempo_traslado_real_min = payload.tiempo_traslado_real_min
+        visita.hora_inicio_traslado = datetime.now(UTC)
+        visita.hora_fin_traslado = now
     if visita.ruta.estado == RutaEstado.PLANIFICADA:
         visita.ruta.estado = RutaEstado.EN_EJECUCION
     db.commit()
@@ -172,6 +178,29 @@ def finalizar_visita(
     visita.tiempo_ejecucion_min = elapsed
     visita.estado = VisitaEstado.COMPLETADA
     update_historial_from_visit(db, visita)
+
+    # ── Calcular tramo ORS desde el PDV anterior (o depósito) ──────────────────
+    if visita.traslado_fuente != "ORS":  # only when not already filled by optimiser
+        all_visits = (
+            db.query(Visita)
+            .filter(Visita.ruta_id == visita.ruta_id)
+            .order_by(Visita.orden_planificado)
+            .all()
+        )
+        prev_visit = next(
+            (v for v in reversed(all_visits) if v.orden_planificado < visita.orden_planificado),
+            None,
+        )
+        if prev_visit:
+            origin_lng, origin_lat = prev_visit.pdv.longitud, prev_visit.pdv.latitud
+        else:
+            origin_lng, origin_lat = DEPOT_LNG, DEPOT_LAT
+        leg = estimate_leg(origin_lng, origin_lat, visita.pdv.longitud, visita.pdv.latitud)
+        if leg["distancia_km"] is not None:
+            visita.ors_distancia_desde_anterior_km = leg["distancia_km"]
+            visita.ors_tiempo_traslado_desde_anterior_min = leg["duracion_min"]
+            visita.traslado_fuente = "ORS"
+    # ─────────────────────────────────────────────────────────────────────────
 
     remaining = (
         db.query(Visita)
