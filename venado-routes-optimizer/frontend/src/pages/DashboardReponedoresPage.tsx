@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { useGlobalFecha } from "../hooks/useGlobalFecha";
+import { CalendarDays } from "lucide-react";
 
 interface Row {
   reponedor: string;
@@ -13,14 +15,28 @@ interface Row {
 
 export function DashboardReponedoresPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [fecha, setFecha] = useGlobalFecha();
 
   useEffect(() => {
-    api.get<Row[]>("/dashboard/metricas-por-reponedor").then(({ data }) => setRows(data));
-  }, []);
+    const params = fecha ? { fecha } : {};
+    api.get<Row[]>("/dashboard/metricas-por-reponedor", { params }).then(({ data }) => setRows(data));
+  }, [fecha]);
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-bold text-ink">Reponedores</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-ink">Reponedores</h2>
+        <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-md shadow-soft border border-slate-200">
+          <CalendarDays className="text-venado" size={20} />
+          <input 
+            type="date" 
+            value={fecha} 
+            onChange={(event) => setFecha(event.target.value)} 
+            className="h-8 rounded-md border-none px-2 focus:ring-0 text-sm"
+            title="Fecha global"
+          />
+        </div>
+      </div>
       <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">

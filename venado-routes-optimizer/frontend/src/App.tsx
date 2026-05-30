@@ -10,6 +10,7 @@ import { DashboardReponedoresPage } from "./pages/DashboardReponedoresPage";
 import { DashboardRutasPage } from "./pages/DashboardRutasPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OptimizadorPage } from "./pages/OptimizadorPage";
+import { RutaMapaPage } from "./pages/RutaMapaPage";
 import { RutaHoyPage } from "./pages/RutaHoyPage";
 import { VisitaPage } from "./pages/VisitaPage";
 
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/app/ruta-hoy" replace /> },
       { path: "ruta-hoy", element: <RutaHoyPage /> },
+      { path: "mapa", element: <RutaMapaPage /> },
       { path: "visita/:visitaId", element: <VisitaPage /> },
     ],
   },

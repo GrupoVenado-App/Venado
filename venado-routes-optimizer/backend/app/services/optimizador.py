@@ -19,6 +19,7 @@ from app.models import (
     Visita,
 )
 from app.services.geocalc import DEPOT_LAT, DEPOT_LNG, dia_semana_es, haversine_meters, traslado_minutos
+from app.services.openrouteservice import get_ors_matrix
 
 MAX_ROUTE_MINUTES = 480
 
@@ -39,6 +40,7 @@ class OptimizedVehicleRoute:
     stops: list[RouteStop]
     distancia_total_km: float
     tiempo_total_min: int
+    matrix_source: str = "LOCAL"
 
 
 def _latest_historial_by_type(db: Session) -> dict[TipoCliente, float]:
@@ -68,8 +70,12 @@ def _latest_historial_by_type(db: Session) -> dict[TipoCliente, float]:
     return {row.pdv_tipo_cliente: float(row.total_min) for row in rows}
 
 
-def _distance_matrix(pdvs: list[PDV]) -> tuple[list[list[float]], list[list[float]]]:
+def _distance_matrix(pdvs: list[PDV]) -> tuple[list[list[float]], list[list[float]], str]:
     points = [(DEPOT_LAT, DEPOT_LNG)] + [(pdv.latitud, pdv.longitud) for pdv in pdvs]
+    ors = get_ors_matrix([(lng, lat) for lat, lng in points])
+    if ors:
+        return ors.distances_km, ors.durations_min, ors.source
+
     n = len(points)
     distances_km = [[0.0 for _ in range(n)] for _ in range(n)]
     travel_min = [[0.0 for _ in range(n)] for _ in range(n)]
@@ -80,7 +86,7 @@ def _distance_matrix(pdvs: list[PDV]) -> tuple[list[list[float]], list[list[floa
             km = haversine_meters(lat1, lng1, lat2, lng2) / 1000
             distances_km[i][j] = km
             travel_min[i][j] = traslado_minutos(km)
-    return distances_km, travel_min
+    return distances_km, travel_min, "LOCAL"
 
 
 def _build_route_from_nodes(
@@ -90,6 +96,7 @@ def _build_route_from_nodes(
     distances_km: list[list[float]],
     travel_min: list[list[float]],
     execution_times: list[int],
+    matrix_source: str,
 ) -> OptimizedVehicleRoute:
     stops: list[RouteStop] = []
     prev_node = 0
@@ -126,6 +133,7 @@ def _build_route_from_nodes(
         stops=stops,
         distancia_total_km=round(total_distance, 2),
         tiempo_total_min=int(total_time),
+        matrix_source=matrix_source,
     )
 
 
@@ -135,6 +143,7 @@ def _solve_with_ortools(
     distances_km: list[list[float]],
     travel_min: list[list[float]],
     execution_times: list[int],
+    matrix_source: str,
 ) -> list[OptimizedVehicleRoute] | None:
     try:
         from ortools.constraint_solver import pywrapcp, routing_enums_pb2
@@ -182,7 +191,7 @@ def _solve_with_ortools(
                 nodes.append(node)
             index = solution.Value(routing.NextVar(index))
         if nodes:
-            routes.append(_build_route_from_nodes(reponedor, pdvs, nodes, distances_km, travel_min, execution_times))
+            routes.append(_build_route_from_nodes(reponedor, pdvs, nodes, distances_km, travel_min, execution_times, matrix_source))
     return routes
 
 
@@ -192,6 +201,7 @@ def _kmeans_fallback(
     distances_km: list[list[float]],
     travel_min: list[list[float]],
     execution_times: list[int],
+    matrix_source: str,
 ) -> list[OptimizedVehicleRoute]:
     if not pdvs:
         return []
@@ -229,7 +239,7 @@ def _kmeans_fallback(
             ordered.append(next_node)
             remaining.remove(next_node)
             current = next_node
-        routes.append(_build_route_from_nodes(reponedores[idx], pdvs, ordered, distances_km, travel_min, execution_times))
+        routes.append(_build_route_from_nodes(reponedores[idx], pdvs, ordered, distances_km, travel_min, execution_times, matrix_source))
     return [route for route in routes if route.stops]
 
 
@@ -272,6 +282,9 @@ def _persist_routes(db: Session, routes: list[OptimizedVehicleRoute], fecha: dat
                 orden_planificado=stop.orden,
                 distancia_desde_anterior_km=stop.distancia_desde_anterior_km,
                 tiempo_traslado_desde_anterior_min=stop.tiempo_traslado_desde_anterior_min,
+                ors_distancia_desde_anterior_km=stop.distancia_desde_anterior_km if optimized.matrix_source == "ORS" else None,
+                ors_tiempo_traslado_desde_anterior_min=stop.tiempo_traslado_desde_anterior_min if optimized.matrix_source == "ORS" else None,
+                traslado_fuente=optimized.matrix_source,
             )
             db.add(visita)
             db.flush()
@@ -316,10 +329,18 @@ def optimizar_rutas(
     execution_times = [0] + [
         int(round(history_times.get(pdv.tipo_cliente, pdv.tiempo_visita_estimado_min))) for pdv in pdvs
     ]
-    distances_km, travel_min = _distance_matrix(pdvs)
+    distances_km, travel_min, matrix_source = _distance_matrix(pdvs)
 
-    routes = _solve_with_ortools(reponedores, pdvs, distances_km, travel_min, execution_times)
+    routes = _solve_with_ortools(reponedores, pdvs, distances_km, travel_min, execution_times, matrix_source)
     if routes is None:
-        routes = _kmeans_fallback(reponedores, pdvs, distances_km, travel_min, execution_times)
+        routes = _kmeans_fallback(reponedores, pdvs, distances_km, travel_min, execution_times, matrix_source)
+
+    # Eliminar rutas planificadas anteriores para prevenir duplicidad
+    db.query(Ruta).filter(
+        Ruta.reponedor_id.in_(reponedor_ids),
+        Ruta.fecha == fecha,
+        Ruta.estado == RutaEstado.PLANIFICADA
+    ).delete(synchronize_session=False)
+    db.flush()
 
     return _persist_routes(db, routes, fecha)

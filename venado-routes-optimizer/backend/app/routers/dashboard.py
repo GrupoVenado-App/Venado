@@ -14,20 +14,21 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 @router.get("/resumen-hoy")
 def resumen_hoy(
+    fecha: date | None = None,
     db: Session = Depends(get_db),
     _user=Depends(require_role("supervisor")),
 ) -> dict:
-    today = date.today()
-    total_planificados = db.query(Visita).join(Ruta).filter(Ruta.fecha == today).count()
-    completadas = db.query(Visita).join(Ruta).filter(Ruta.fecha == today, Visita.estado == VisitaEstado.COMPLETADA).count()
-    en_progreso = db.query(Visita).join(Ruta).filter(Ruta.fecha == today, Visita.estado == VisitaEstado.EN_PROGRESO).count()
-    km_totales = db.query(func.coalesce(func.sum(Ruta.distancia_total_km), 0)).filter(Ruta.fecha == today).scalar()
+    target = fecha or date.today()
+    total_planificados = db.query(Visita).join(Ruta).filter(Ruta.fecha == target).count()
+    completadas = db.query(Visita).join(Ruta).filter(Ruta.fecha == target, Visita.estado == VisitaEstado.COMPLETADA).count()
+    en_progreso = db.query(Visita).join(Ruta).filter(Ruta.fecha == target, Visita.estado == VisitaEstado.EN_PROGRESO).count()
+    km_totales = db.query(func.coalesce(func.sum(Ruta.distancia_total_km), 0)).filter(Ruta.fecha == target).scalar()
     tiempo_real = (
-        db.query(func.coalesce(func.sum(Visita.tiempo_ejecucion_min), 0)).join(Ruta).filter(Ruta.fecha == today).scalar()
+        db.query(func.coalesce(func.sum(Visita.tiempo_ejecucion_min), 0)).join(Ruta).filter(Ruta.fecha == target).scalar()
     )
     cobertura = round((completadas / total_planificados) * 100, 1) if total_planificados else 0
     return {
-        "fecha": today.isoformat(),
+        "fecha": target.isoformat(),
         "total_pdvs_planificados": total_planificados,
         "total_visitas_completadas": completadas,
         "total_en_progreso": en_progreso,
@@ -40,14 +41,15 @@ def resumen_hoy(
 
 @router.get("/rutas-activas")
 def rutas_activas(
+    fecha: date | None = None,
     db: Session = Depends(get_db),
     _user=Depends(require_role("supervisor")),
 ) -> list[dict]:
-    today = date.today()
+    target = fecha or date.today()
     rutas = (
         db.query(Ruta)
         .options(joinedload(Ruta.reponedor), joinedload(Ruta.visitas).joinedload(Visita.pdv))
-        .filter(Ruta.fecha == today, Ruta.estado == RutaEstado.EN_EJECUCION)
+        .filter(Ruta.fecha == target, Ruta.estado == RutaEstado.EN_EJECUCION)
         .all()
     )
     result = []
@@ -70,14 +72,15 @@ def rutas_activas(
 
 @router.get("/metricas-por-reponedor")
 def metricas_por_reponedor(
+    fecha: date | None = None,
     db: Session = Depends(get_db),
     _user=Depends(require_role("supervisor")),
 ) -> list[dict]:
-    today = date.today()
+    target = fecha or date.today()
     reponedores = db.query(Reponedor).filter(Reponedor.activo.is_(True)).order_by(Reponedor.nombre).all()
     rows = []
     for rep in reponedores:
-        rutas = db.query(Ruta).filter(Ruta.reponedor_id == rep.id, Ruta.fecha == today).all()
+        rutas = db.query(Ruta).filter(Ruta.reponedor_id == rep.id, Ruta.fecha == target).all()
         ruta_ids = [ruta.id for ruta in rutas]
         visitas = db.query(Visita).filter(Visita.ruta_id.in_(ruta_ids)).all() if ruta_ids else []
         total = len(visitas)
@@ -99,15 +102,16 @@ def metricas_por_reponedor(
 
 @router.get("/cobertura-mapa")
 def cobertura_mapa(
+    fecha: date | None = None,
     db: Session = Depends(get_db),
     _user=Depends(require_role("supervisor")),
 ) -> dict:
-    today = date.today()
+    target = fecha or date.today()
     visitas = (
         db.query(Visita)
         .options(joinedload(Visita.pdv), joinedload(Visita.ruta).joinedload(Ruta.reponedor))
         .join(Ruta)
-        .filter(Ruta.fecha == today)
+        .filter(Ruta.fecha == target)
         .all()
     )
     features = [
@@ -140,13 +144,16 @@ def cobertura_mapa(
 
 @router.get("/desviaciones")
 def desviaciones(
+    fecha: date | None = None,
     db: Session = Depends(get_db),
     _user=Depends(require_role("supervisor")),
 ) -> list[dict]:
+    target = fecha or date.today()
     visitas = (
         db.query(Visita)
         .options(joinedload(Visita.pdv), joinedload(Visita.ruta).joinedload(Ruta.reponedor))
-        .filter(Visita.estado == VisitaEstado.COMPLETADA, Visita.tiempo_ejecucion_min.isnot(None))
+        .join(Ruta)
+        .filter(Ruta.fecha == target, Visita.estado == VisitaEstado.COMPLETADA, Visita.tiempo_ejecucion_min.isnot(None))
         .all()
     )
     result = []
@@ -171,15 +178,16 @@ def desviaciones(
 
 @router.get("/por-mercado")
 def por_mercado(
+    fecha: date | None = None,
     db: Session = Depends(get_db),
     _user=Depends(require_role("supervisor")),
 ) -> list[dict]:
-    today = date.today()
+    target = fecha or date.today()
     mercados = db.query(PDV.mercado).distinct().order_by(PDV.mercado).all()
     rows = []
     for (mercado,) in mercados:
         total_pdvs = db.query(PDV).filter(PDV.mercado == mercado).count()
-        visitas = db.query(Visita).join(PDV).join(Ruta).filter(Ruta.fecha == today, PDV.mercado == mercado).all()
+        visitas = db.query(Visita).join(PDV).join(Ruta).filter(Ruta.fecha == target, PDV.mercado == mercado).all()
         completadas = sum(1 for visita in visitas if visita.estado == VisitaEstado.COMPLETADA)
         rows.append(
             {

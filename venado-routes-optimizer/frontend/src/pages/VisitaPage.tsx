@@ -41,6 +41,11 @@ export function VisitaPage() {
     return distanceMeters(coords, { latitud: visita.pdv.latitud, longitud: visita.pdv.longitud });
   }, [coords, visita]);
 
+  const canStartVisit = Boolean(
+    coords && visita && visita.estado === "PENDIENTE" && meters !== null && meters <= 200 && !saving,
+  );
+  const visitInProgress = visita?.estado === "EN_PROGRESO";
+
   const mapData: FeatureCollection | null = visita
     ? {
         type: "FeatureCollection",
@@ -136,18 +141,25 @@ export function VisitaPage() {
       <button
         type="button"
         onClick={iniciar}
-        disabled={saving || visita.estado === "EN_PROGRESO" || visita.estado === "COMPLETADA"}
+        disabled={!canStartVisit}
         className="touch-button inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-3 font-bold text-white disabled:opacity-40"
       >
-        <Navigation size={19} /> Iniciar visita
+        <Navigation size={19} />
+        {visitInProgress ? "Visita en progreso" : "Iniciar visita"}
       </button>
 
-      <ChecklistMicroTareas visitaId={visita.id} onProgress={setAllTasksDone} />
+      {!visitInProgress && visita.estado !== "COMPLETADA" ? (
+        <div className="rounded-md border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-600">
+          Primero inicia la visita cerca del PDV. Luego se habilitan los tiempos de cada micro-tarea.
+        </div>
+      ) : null}
+
+      <ChecklistMicroTareas visitaId={visita.id} disabled={!visitInProgress} onProgress={setAllTasksDone} />
 
       <button
         type="button"
         onClick={finalizar}
-        disabled={saving || !allTasksDone || visita.estado === "COMPLETADA"}
+        disabled={saving || !visitInProgress || !allTasksDone || visita.estado === "COMPLETADA"}
         className="touch-button inline-flex w-full items-center justify-center gap-2 rounded-md bg-green-700 px-4 py-3 font-bold text-white disabled:opacity-40"
       >
         <CheckCircle2 size={20} /> Finalizar visita

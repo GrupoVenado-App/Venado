@@ -26,6 +26,7 @@ services:
       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       SEED_ON_START: "true"
       UPLOAD_DIR: /app/uploads
+      ORS_API_KEY: ${ORS_API_KEY:-}
     ports:
       - "8000:8000"
     volumes:

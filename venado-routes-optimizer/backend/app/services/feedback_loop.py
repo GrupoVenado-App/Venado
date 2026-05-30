@@ -27,18 +27,31 @@ def recalcular_historial(db: Session) -> dict:
     today = date.today()
     semana = int(today.strftime("%V"))
     created = 0
+    updated = 0
     for row in rows:
-        db.add(
-            HistorialTiempo(
-                micro_tarea_id=row.micro_tarea_id,
-                pdv_tipo_cliente=row.tipo_cliente,
-                tiempo_promedio_real_min=round(float(row.promedio), 2),
-                cantidad_muestras=int(row.muestras),
-                fecha_calculo=today,
-                semana_anio=semana,
+        existing = db.query(HistorialTiempo).filter(
+            HistorialTiempo.micro_tarea_id == row.micro_tarea_id,
+            HistorialTiempo.pdv_tipo_cliente == row.tipo_cliente,
+            HistorialTiempo.fecha_calculo == today
+        ).one_or_none()
+
+        if existing:
+            existing.tiempo_promedio_real_min = round(float(row.promedio), 2)
+            existing.cantidad_muestras = int(row.muestras)
+            existing.semana_anio = semana
+            updated += 1
+        else:
+            db.add(
+                HistorialTiempo(
+                    micro_tarea_id=row.micro_tarea_id,
+                    pdv_tipo_cliente=row.tipo_cliente,
+                    tiempo_promedio_real_min=round(float(row.promedio), 2),
+                    cantidad_muestras=int(row.muestras),
+                    fecha_calculo=today,
+                    semana_anio=semana,
+                )
             )
-        )
-        created += 1
+            created += 1
 
     suggestions = []
     planned = db.query(Ruta).filter(Ruta.fecha >= today).all()

@@ -46,8 +46,12 @@ export function FieldLayout() {
             Ruta
           </NavLink>
           <NavLink
-            to="/app/ruta-hoy"
-            className="flex min-h-[64px] flex-col items-center justify-center gap-1 text-xs font-semibold text-slate-500"
+            to="/app/mapa"
+            className={({ isActive }) =>
+              `flex min-h-[64px] flex-col items-center justify-center gap-1 text-xs font-semibold ${
+                isActive ? "text-venado" : "text-slate-500"
+              }`
+            }
           >
             <Map size={22} />
             Mapa

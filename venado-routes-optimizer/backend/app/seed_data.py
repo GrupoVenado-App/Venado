@@ -26,14 +26,22 @@ from app.models import (
 DATA_PATH = Path(__file__).resolve().parent / "data" / "pdvs_la_paz.csv"
 
 MICRO_TAREAS = [
+    # PARETO (~90 min total)
     ("Faldones", TipoCliente.PARETO, "KRIS", 30),
+    ("Revision de Inventario", TipoCliente.PARETO, "GENERAL", 20),
+    ("Negociacion de Espacios", TipoCliente.PARETO, "GENERAL", 25),
+    ("Fotografias y Evidencia", TipoCliente.PARETO, "GENERAL", 15),
+    # MAYORISTA (~65 min total)
     ("Toldos Enrrolables", TipoCliente.MAYORISTA, "BRISTAR", 28),
+    ("Verificacion de Stock", TipoCliente.MAYORISTA, "GENERAL", 17),
+    ("Toma de Pedidos", TipoCliente.MAYORISTA, "GENERAL", 20),
+    # MINORISTA (~38 min total)
     ("Gancheras de Pared", TipoCliente.MINORISTA, "DE LA GRANJA", 23),
+    ("Acomodo de Vitrina", TipoCliente.MINORISTA, "GENERAL", 15),
+    # DETALLISTA (~37 min total)
     ("Exhibidor a Medida", TipoCliente.DETALLISTA, "MULTIMARCA", 15),
-    ("Exhibidor Metalico de 3 Bandejas", TipoCliente.DETALLISTA, "PANIFICACION", 15),
     ("Marco Destacador", TipoCliente.DETALLISTA, "PULPIN", 10),
     ("Exhibidor Colgante Caldos", TipoCliente.DETALLISTA, "KRIOLLA", 12),
-    ("Bastidor", TipoCliente.DETALLISTA, "FRUSSION", 10),
 ]
 
 EQUIPO = {

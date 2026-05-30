@@ -6,6 +6,7 @@ import { MicroTareaEjecucion } from "../types";
 
 interface Props {
   visitaId: string;
+  disabled?: boolean;
   onProgress?: (completed: boolean) => void;
 }
 
@@ -18,7 +19,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function ChecklistMicroTareas({ visitaId, onProgress }: Props) {
+export function ChecklistMicroTareas({ visitaId, disabled = false, onProgress }: Props) {
   const [items, setItems] = useState<MicroTareaEjecucion[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
@@ -75,9 +76,10 @@ export function ChecklistMicroTareas({ visitaId, onProgress }: Props) {
               type="button"
               aria-label="Completar"
               onClick={() => toggle(item.id)}
+              disabled={disabled || loadingId === item.id}
               className={`grid h-11 w-11 shrink-0 place-items-center rounded-md border ${
                 item.completada ? "border-green-600 bg-green-600 text-white" : "border-slate-300 bg-white text-slate-500"
-              }`}
+              } disabled:opacity-40`}
             >
               <Check size={20} />
             </button>
@@ -87,11 +89,12 @@ export function ChecklistMicroTareas({ visitaId, onProgress }: Props) {
             <button
               type="button"
               onClick={() => start(item.id)}
-              disabled={loadingId === item.id || Boolean(item.hora_inicio)}
-              className="touch-button inline-flex items-center justify-center rounded-md bg-slate-100 text-slate-700 disabled:opacity-40"
-              aria-label="Iniciar"
+              disabled={disabled || loadingId === item.id || Boolean(item.hora_inicio)}
+              className="touch-button inline-flex items-center justify-center gap-2 rounded-md bg-slate-100 px-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
+              aria-label="Iniciar tarea"
             >
               <Play size={18} />
+              Iniciar
             </button>
             <label className="touch-button inline-flex cursor-pointer items-center justify-center rounded-md bg-slate-100 text-slate-700">
               <Camera size={18} />
@@ -100,6 +103,7 @@ export function ChecklistMicroTareas({ visitaId, onProgress }: Props) {
                 type="file"
                 accept="image/*"
                 capture="environment"
+                disabled={disabled}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) finish(item.id, file);
@@ -109,11 +113,12 @@ export function ChecklistMicroTareas({ visitaId, onProgress }: Props) {
             <button
               type="button"
               onClick={() => finish(item.id)}
-              disabled={loadingId === item.id || !item.hora_inicio || item.completada}
-              className="touch-button inline-flex items-center justify-center rounded-md bg-ink text-white disabled:opacity-40"
-              aria-label="Finalizar"
+              disabled={disabled || loadingId === item.id || !item.hora_inicio || item.completada}
+              className="touch-button inline-flex items-center justify-center gap-2 rounded-md bg-ink px-2 text-sm font-semibold text-white disabled:opacity-40"
+              aria-label="Finalizar tarea"
             >
               <Square size={18} />
+              Fin
             </button>
           </div>
         </article>

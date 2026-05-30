@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     ]
     seed_on_start: bool = False
     upload_dir: str = "/app/uploads"
+    ors_api_key: str | None = None
+    ors_matrix_max_locations: int = 50
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

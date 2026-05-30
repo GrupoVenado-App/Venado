@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../api/client";
+import { useGlobalFecha } from "../hooks/useGlobalFecha";
+import { CalendarDays } from "lucide-react";
 
 interface MercadoRow {
   mercado: string;
@@ -12,14 +14,28 @@ interface MercadoRow {
 
 export function DashboardMercadosPage() {
   const [rows, setRows] = useState<MercadoRow[]>([]);
+  const [fecha, setFecha] = useGlobalFecha();
 
   useEffect(() => {
-    api.get<MercadoRow[]>("/dashboard/por-mercado").then(({ data }) => setRows(data));
-  }, []);
+    const params = fecha ? { fecha } : {};
+    api.get<MercadoRow[]>("/dashboard/por-mercado", { params }).then(({ data }) => setRows(data));
+  }, [fecha]);
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-bold text-ink">Mercados</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-ink">Mercados</h2>
+        <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-md shadow-soft border border-slate-200">
+          <CalendarDays className="text-venado" size={20} />
+          <input 
+            type="date" 
+            value={fecha} 
+            onChange={(event) => setFecha(event.target.value)} 
+            className="h-8 rounded-md border-none px-2 focus:ring-0 text-sm"
+            title="Fecha global"
+          />
+        </div>
+      </div>
       <section className="h-[360px] rounded-md border border-slate-200 bg-white p-4 shadow-soft">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows.slice(0, 18)} margin={{ top: 8, right: 16, left: 0, bottom: 64 }}>

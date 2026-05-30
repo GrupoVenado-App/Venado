@@ -135,6 +135,9 @@ def iniciar_visita(
     _user=Depends(require_role("reponedor")),
 ) -> dict:
     visita = get_visita_or_404(db, visita_id)
+    if visita.hora_inicio_real:
+        raise HTTPException(status_code=400, detail="La visita ya fue iniciada")
+
     distance_m = distance_to_pdv_meters(db, visita, payload.latitud, payload.longitud)
     if distance_m > 200:
         raise HTTPException(status_code=400, detail=f"Estas a {distance_m:.0f} metros del PDV. Acercate para iniciar.")
@@ -159,6 +162,8 @@ def finalizar_visita(
     visita = get_visita_or_404(db, visita_id)
     if not visita.hora_inicio_real:
         raise HTTPException(status_code=400, detail="La visita aun no fue iniciada")
+    if visita.estado == VisitaEstado.COMPLETADA:
+        raise HTTPException(status_code=400, detail="La visita ya fue completada")
 
     now = datetime.now(UTC)
     elapsed = max(1, math.ceil((now - visita.hora_inicio_real).total_seconds() / 60))

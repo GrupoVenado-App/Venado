@@ -25,6 +25,7 @@ class RutaEstado(str, enum.Enum):
 
 class VisitaEstado(str, enum.Enum):
     PENDIENTE = "PENDIENTE"
+    EN_TRASLADO = "EN_TRASLADO"
     EN_PROGRESO = "EN_PROGRESO"
     COMPLETADA = "COMPLETADA"
     NO_VISITADO = "NO_VISITADO"
@@ -127,8 +128,16 @@ class Visita(Base):
     tiempo_ejecucion_min = Column(Integer, nullable=True)
     coordenada_checkin = Column(Geography(geometry_type="POINT", srid=4326), nullable=True)
     coordenada_checkout = Column(Geography(geometry_type="POINT", srid=4326), nullable=True)
+    hora_inicio_traslado = Column(DateTime(timezone=True), nullable=True)
+    hora_fin_traslado = Column(DateTime(timezone=True), nullable=True)
+    tiempo_traslado_real_min = Column(Integer, nullable=True)
+    coordenada_inicio_traslado = Column(Geography(geometry_type="POINT", srid=4326), nullable=True)
+    coordenada_fin_traslado = Column(Geography(geometry_type="POINT", srid=4326), nullable=True)
     distancia_desde_anterior_km = Column(Float, nullable=True)
     tiempo_traslado_desde_anterior_min = Column(Integer, nullable=True)
+    ors_distancia_desde_anterior_km = Column(Float, nullable=True)
+    ors_tiempo_traslado_desde_anterior_min = Column(Integer, nullable=True)
+    traslado_fuente = Column(String(30), default="LOCAL", nullable=False)
     foto_url = Column(String(500), nullable=True)
 
     ruta = relationship("Ruta", back_populates="visitas")
