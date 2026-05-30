@@ -1,7 +1,7 @@
 import {
-  AlertTriangle,
   BarChart3,
   Download,
+  FileText,
   GitBranch,
   LayoutDashboard,
   LogOut,
@@ -17,7 +17,7 @@ const links = [
   { to: "/dashboard/rutas", label: "Rutas", icon: Route },
   { to: "/dashboard/reponedores", label: "Reponedores", icon: Users },
   { to: "/dashboard/mercados", label: "Mercados", icon: BarChart3 },
-  { to: "/dashboard/desviaciones", label: "Desviaciones", icon: AlertTriangle },
+  { to: "/dashboard/reportes", label: "Reportes", icon: FileText },
   { to: "/dashboard/bi-export", label: "BI Export", icon: Download },
   { to: "/optimizador", label: "Optimizador", icon: GitBranch },
 ];

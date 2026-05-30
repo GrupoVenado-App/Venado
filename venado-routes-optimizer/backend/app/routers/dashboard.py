@@ -1,12 +1,14 @@
 from datetime import date
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func
+from geoalchemy2.shape import to_shape
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_role
 from app.database import get_db
-from app.models import PDV, Reponedor, Ruta, RutaEstado, Visita, VisitaEstado
+from app.models import PDV, EjecucionMicroTarea, Reponedor, Ruta, RutaEstado, Visita, VisitaEstado
 from app.services.openrouteservice import get_ors_route_geometry
 
 
@@ -208,3 +210,230 @@ def por_mercado(
             }
         )
     return rows
+
+
+@router.get("/reportes-reponedores")
+def reportes_reponedores(
+    fecha: date | None = None,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("supervisor")),
+) -> dict:
+    target = fecha or date.today()
+
+    reponedores = db.query(Reponedor).filter(Reponedor.activo.is_(True)).order_by(Reponedor.nombre).all()
+
+    rutas_dia = (
+        db.query(Ruta)
+        .options(joinedload(Ruta.reponedor), joinedload(Ruta.visitas).joinedload(Visita.ejecuciones))
+        .filter(Ruta.fecha == target)
+        .all()
+    )
+    rutas_por_reponedor: dict = {str(ruta.reponedor_id): ruta for ruta in rutas_dia}
+
+    km_totales = sum(ruta.distancia_total_km or 0 for ruta in rutas_dia)
+    tiempo_total_min = sum(ruta.tiempo_total_estimado_min or 0 for ruta in rutas_dia)
+
+    pdvs_planificados = sum(len(ruta.visitas) for ruta in rutas_dia)
+    pdvs_completados = sum(
+        sum(1 for v in ruta.visitas if v.estado == VisitaEstado.COMPLETADA) for ruta in rutas_dia
+    )
+    pdvs_en_progreso = sum(
+        sum(1 for v in ruta.visitas if v.estado == VisitaEstado.EN_PROGRESO) for ruta in rutas_dia
+    )
+    pdvs_pendientes = pdvs_planificados - pdvs_completados - pdvs_en_progreso
+
+    lista_reponedores = []
+    for rep in reponedores:
+        ruta = rutas_por_reponedor.get(str(rep.id))
+        visitas = ruta.visitas if ruta else []
+
+        comp = sum(1 for v in visitas if v.estado == VisitaEstado.COMPLETADA)
+        en_prog = sum(1 for v in visitas if v.estado == VisitaEstado.EN_PROGRESO)
+        pend = sum(1 for v in visitas if v.estado == VisitaEstado.PENDIENTE)
+
+        # Última ubicación: última coordenada_checkin no nula, ordenada por orden_planificado desc
+        ultima_ubicacion = None
+        visitas_con_checkin = [
+            v for v in sorted(visitas, key=lambda x: x.orden_planificado, reverse=True)
+            if v.coordenada_checkin is not None
+        ]
+        if visitas_con_checkin:
+            shape = to_shape(visitas_con_checkin[0].coordenada_checkin)
+            ultima_ubicacion = {"latitud": shape.y, "longitud": shape.x}
+
+        # Micro tareas
+        todas_ejecuciones = [ej for v in visitas for ej in v.ejecuciones]
+        micro_completadas = sum(1 for ej in todas_ejecuciones if ej.completada)
+        micro_total = len(todas_ejecuciones)
+
+        lista_reponedores.append(
+            {
+                "id": str(rep.id),
+                "nombre": rep.nombre,
+                "supervisor": rep.supervisor,
+                "vehiculo_tipo": rep.vehiculo_tipo,
+                "estado_ruta": ruta.estado.value if ruta else "SIN_RUTA",
+                "ruta_id": str(ruta.id) if ruta else None,
+                "pdvs_asignados": len(visitas),
+                "pdvs_completados": comp,
+                "pdvs_en_progreso": en_prog,
+                "pdvs_pendientes": pend,
+                "km_recorridos": round(float(ruta.distancia_total_km or 0), 2) if ruta else 0.0,
+                "km_asignados": round(float(ruta.distancia_total_km or 0), 2) if ruta else 0.0,
+                "tiempo_total_estimado_min": ruta.tiempo_total_estimado_min if ruta else None,
+                "tiempo_total_real_min": ruta.tiempo_total_real_min if ruta else None,
+                "ultima_ubicacion": ultima_ubicacion,
+                "micro_tareas_completadas": micro_completadas,
+                "micro_tareas_total": micro_total,
+            }
+        )
+
+    resumen = {
+        "total_reponedores": len(reponedores),
+        "pdvs_planificados": pdvs_planificados,
+        "pdvs_completados": pdvs_completados,
+        "pdvs_pendientes": pdvs_pendientes,
+        "pdvs_en_progreso": pdvs_en_progreso,
+        "km_totales": round(float(km_totales), 2),
+        "tiempo_total_min": int(tiempo_total_min),
+    }
+
+    return {
+        "fecha": target.isoformat(),
+        "resumen": resumen,
+        "reponedores": lista_reponedores,
+    }
+
+
+@router.get("/reponedor-detalle/{reponedor_id}")
+def reponedor_detalle(
+    reponedor_id: UUID,
+    fecha: date | None = None,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("supervisor")),
+) -> dict:
+    target = fecha or date.today()
+
+    rep = db.query(Reponedor).filter(Reponedor.id == reponedor_id).first()
+
+    ruta = (
+        db.query(Ruta)
+        .options(
+            joinedload(Ruta.visitas)
+            .joinedload(Visita.pdv),
+            joinedload(Ruta.visitas)
+            .joinedload(Visita.ejecuciones)
+            .joinedload(EjecucionMicroTarea.micro_tarea),
+        )
+        .filter(Ruta.reponedor_id == reponedor_id, Ruta.fecha == target)
+        .first()
+    )
+
+    visitas_ordenadas = sorted(ruta.visitas, key=lambda v: v.orden_planificado) if ruta else []
+
+    visitas_list = []
+    for v in visitas_ordenadas:
+        checkin_lat = None
+        checkin_lng = None
+        if v.coordenada_checkin is not None:
+            shape = to_shape(v.coordenada_checkin)
+            checkin_lat = shape.y
+            checkin_lng = shape.x
+
+        ejecuciones_list = [
+            {
+                "nombre_tarea": ej.micro_tarea.nombre if ej.micro_tarea else None,
+                "completada": ej.completada,
+                "tiempo_real_min": ej.tiempo_real_min,
+                "hora_inicio": ej.hora_inicio.isoformat() if ej.hora_inicio else None,
+                "hora_fin": ej.hora_fin.isoformat() if ej.hora_fin else None,
+            }
+            for ej in v.ejecuciones
+        ]
+
+        visitas_list.append(
+            {
+                "id": str(v.id),
+                "orden_planificado": v.orden_planificado,
+                "estado": v.estado.value,
+                "pdv_codigo": v.pdv.codigo,
+                "pdv_nombre": v.pdv.nombre,
+                "pdv_mercado": v.pdv.mercado,
+                "pdv_tipo_cliente": v.pdv.tipo_cliente.value,
+                "pdv_latitud": v.pdv.latitud,
+                "pdv_longitud": v.pdv.longitud,
+                "hora_inicio_real": v.hora_inicio_real.isoformat() if v.hora_inicio_real else None,
+                "hora_fin_real": v.hora_fin_real.isoformat() if v.hora_fin_real else None,
+                "tiempo_ejecucion_min": v.tiempo_ejecucion_min,
+                "tiempo_traslado_real_min": v.tiempo_traslado_real_min,
+                "checkin_latitud": checkin_lat,
+                "checkin_longitud": checkin_lng,
+                "ejecuciones": ejecuciones_list,
+            }
+        )
+
+    # Coordenadas planificadas desde pdvs_ordenados del JSON de la ruta
+    ruta_planificada_coords = []
+    if ruta and ruta.pdvs_ordenados:
+        for pdv_entry in ruta.pdvs_ordenados:
+            if isinstance(pdv_entry, dict):
+                lng = pdv_entry.get("longitud")
+                lat = pdv_entry.get("latitud")
+                if lng is not None and lat is not None:
+                    ruta_planificada_coords.append([lng, lat])
+
+    # Coordenadas reales desde visitas con checkin, ordenadas por orden_planificado
+    ruta_real_coords = [
+        [v["checkin_longitud"], v["checkin_latitud"]]
+        for v in visitas_list
+        if v["checkin_longitud"] is not None and v["checkin_latitud"] is not None
+    ]
+
+    # Tiempos agregados
+    tiempo_en_ruta_min = sum(
+        v.tiempo_traslado_real_min or v.tiempo_traslado_desde_anterior_min or 0
+        for v in visitas_ordenadas
+    )
+    tiempo_en_microtareas_min = sum(
+        v.tiempo_ejecucion_min or 0
+        for v in visitas_ordenadas
+        if v.estado == VisitaEstado.COMPLETADA
+    )
+
+    todas_ejecuciones = [ej for v in visitas_ordenadas for ej in v.ejecuciones]
+    micro_total = len(todas_ejecuciones)
+    micro_completadas = sum(1 for ej in todas_ejecuciones if ej.completada)
+
+    ruta_dict = None
+    if ruta:
+        ruta_dict = {
+            "id": str(ruta.id),
+            "estado": ruta.estado.value,
+            "distancia_total_km": round(float(ruta.distancia_total_km or 0), 2),
+            "tiempo_total_estimado_min": ruta.tiempo_total_estimado_min,
+            "tiempo_total_real_min": ruta.tiempo_total_real_min,
+            "pdvs_ordenados": ruta.pdvs_ordenados,
+        }
+
+    reponedor_dict = None
+    if rep:
+        reponedor_dict = {
+            "id": str(rep.id),
+            "nombre": rep.nombre,
+            "supervisor": rep.supervisor,
+            "email": rep.email,
+            "vehiculo_tipo": rep.vehiculo_tipo,
+        }
+
+    return {
+        "reponedor": reponedor_dict,
+        "fecha": target.isoformat(),
+        "ruta": ruta_dict,
+        "visitas": visitas_list,
+        "ruta_planificada_coords": ruta_planificada_coords,
+        "ruta_real_coords": ruta_real_coords,
+        "tiempo_en_ruta_min": int(tiempo_en_ruta_min),
+        "tiempo_en_microtareas_min": int(tiempo_en_microtareas_min),
+        "micro_tareas_total": micro_total,
+        "micro_tareas_completadas": micro_completadas,
+    }

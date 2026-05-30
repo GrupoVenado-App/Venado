@@ -3,13 +3,14 @@ import { clearSession, getToken } from "./api/client";
 import { DashboardLayout } from "./layouts/DashboardLayout";
 import { FieldLayout } from "./layouts/FieldLayout";
 import { BiExportPage } from "./pages/BiExportPage";
-import { DashboardDesviacionesPage } from "./pages/DashboardDesviacionesPage";
 import { DashboardMapPage } from "./pages/DashboardMapPage";
 import { DashboardMercadosPage } from "./pages/DashboardMercadosPage";
 import { DashboardReponedoresPage } from "./pages/DashboardReponedoresPage";
 import { DashboardRutasPage } from "./pages/DashboardRutasPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OptimizadorPage } from "./pages/OptimizadorPage";
+import { ReponedorDetallePage } from "./pages/ReponedorDetallePage";
+import { ReportesPage } from "./pages/ReportesPage";
 import { RutaMapaPage } from "./pages/RutaMapaPage";
 import { RutaHoyPage } from "./pages/RutaHoyPage";
 import { VisitaPage } from "./pages/VisitaPage";
@@ -61,7 +62,8 @@ const router = createBrowserRouter([
       { path: "/dashboard/rutas", element: <DashboardRutasPage /> },
       { path: "/dashboard/reponedores", element: <DashboardReponedoresPage /> },
       { path: "/dashboard/mercados", element: <DashboardMercadosPage /> },
-      { path: "/dashboard/desviaciones", element: <DashboardDesviacionesPage /> },
+      { path: "/dashboard/reportes", element: <ReportesPage /> },
+      { path: "/dashboard/reportes/:reponedorId", element: <ReponedorDetallePage /> },
       { path: "/dashboard/bi-export", element: <BiExportPage /> },
       { path: "/optimizador", element: <OptimizadorPage /> },
     ],
