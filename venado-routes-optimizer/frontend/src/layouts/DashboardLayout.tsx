@@ -52,7 +52,7 @@ export function DashboardLayout() {
                 to={to}
                 className={({ isActive }) =>
                   `flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-semibold ${
-                    isActive ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                    isActive ? "bg-venado text-white" : "text-slate-600 hover:bg-blue-50 hover:text-skyroute"
                   }`
                 }
               >
@@ -68,7 +68,7 @@ export function DashboardLayout() {
             <button
               type="button"
               onClick={logout}
-              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-slate-100 text-sm font-semibold text-slate-700"
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-blue-50 text-sm font-semibold text-skyroute"
             >
               <LogOut size={18} />
               Salir
@@ -81,7 +81,7 @@ export function DashboardLayout() {
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
           <div className="flex items-center justify-between">
             <strong>Venado Rutas</strong>
-            <button className="grid h-10 w-10 place-items-center rounded-md bg-slate-100" onClick={logout} aria-label="Salir">
+            <button className="grid h-10 w-10 place-items-center rounded-md bg-blue-50 text-skyroute" onClick={logout} aria-label="Salir">
               <LogOut size={18} />
             </button>
           </div>
@@ -92,7 +92,7 @@ export function DashboardLayout() {
                 to={to}
                 className={({ isActive }) =>
                   `shrink-0 rounded px-3 py-2 text-sm font-semibold ${
-                    isActive ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"
+                    isActive ? "bg-venado text-white" : "bg-blue-50 text-skyroute"
                   }`
                 }
               >

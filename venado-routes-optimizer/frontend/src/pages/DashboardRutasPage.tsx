@@ -34,7 +34,7 @@ export function DashboardRutasPage() {
           </div>
         <Link
           to="/optimizador"
-          className="touch-button inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-3 font-semibold text-white"
+          className="touch-button inline-flex items-center justify-center gap-2 rounded-md bg-venado px-4 py-3 font-semibold text-white transition-colors hover:bg-skyroute"
         >
           <GitBranch size={18} />
           Optimizar rutas

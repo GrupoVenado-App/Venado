@@ -68,9 +68,9 @@ interface ReportesData {
 }
 
 const ESTADO_COLOR: Record<string, string> = {
-  COMPLETADA: "#16a34a",
+  COMPLETADA: "#174ea6",
   EN_EJECUCION: "#2563eb",
-  PLANIFICADA: "#f59e0b",
+  PLANIFICADA: "#c8102e",
   CANCELADA: "#dc2626",
   SIN_RUTA: "#94a3b8",
 };
@@ -183,9 +183,9 @@ export function ReportesPage() {
   const pieData = useMemo(() => {
     if (!data?.resumen) return [];
     return [
-      { name: "Completados", value: data.resumen.pdvs_completados, color: "#16a34a" },
+      { name: "Completados", value: data.resumen.pdvs_completados, color: "#174ea6" },
       { name: "En progreso", value: data.resumen.pdvs_en_progreso, color: "#2563eb" },
-      { name: "Pendientes", value: data.resumen.pdvs_pendientes, color: "#f59e0b" },
+      { name: "Pendientes", value: data.resumen.pdvs_pendientes, color: "#c8102e" },
     ].filter((d) => d.value > 0);
   }, [data]);
 
@@ -235,7 +235,7 @@ export function ReportesPage() {
             onChange={(e) => setFecha(e.target.value)}
             className="h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium"
           />
-          <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" title="En vivo" />
+          <span className="flex h-2 w-2 rounded-full bg-venado animate-pulse" title="En vivo" />
         </div>
       </div>
 
@@ -275,13 +275,13 @@ export function ReportesPage() {
         </div>
         <div className="h-3 overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-venado to-skyroute transition-all duration-500"
             style={{ width: `${cobertura}%` }}
           />
         </div>
         <div className="mt-2 flex gap-4 text-xs text-slate-500">
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-green-500" />
+            <span className="h-2 w-2 rounded-full bg-skyroute" />
             {resumen.pdvs_completados} completados
           </span>
           <span className="flex items-center gap-1">
@@ -289,7 +289,7 @@ export function ReportesPage() {
             {resumen.pdvs_en_progreso} en progreso
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-amber-400" />
+            <span className="h-2 w-2 rounded-full bg-venado" />
             {resumen.pdvs_pendientes} pendientes
           </span>
         </div>
@@ -403,9 +403,9 @@ export function ReportesPage() {
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="Completados" stackId="a" fill="#16a34a" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="Completados" stackId="a" fill="#174ea6" radius={[0, 0, 0, 0]} />
               <Bar dataKey="En progreso" stackId="a" fill="#2563eb" />
-              <Bar dataKey="Pendientes" stackId="a" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Pendientes" stackId="a" fill="#c8102e" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -454,10 +454,10 @@ export function ReportesPage() {
                     key={index}
                     fill={
                       entry.eficiencia >= 80
-                        ? "#16a34a"
+                        ? "#174ea6"
                         : entry.eficiencia >= 50
                         ? "#2563eb"
-                        : "#f59e0b"
+                        : "#c8102e"
                     }
                   />
                 ))}

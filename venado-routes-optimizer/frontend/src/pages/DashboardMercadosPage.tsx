@@ -43,8 +43,8 @@ export function DashboardMercadosPage() {
             <XAxis dataKey="mercado" angle={-35} textAnchor="end" interval={0} height={90} tick={{ fontSize: 11 }} />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="pdvs_totales" stackId="a" fill="#2563eb" name="PDVs" />
-            <Bar dataKey="visitas_completadas" stackId="a" fill="#15803d" name="Completadas" />
+            <Bar dataKey="pdvs_totales" stackId="a" fill="#c8102e" name="PDVs" />
+            <Bar dataKey="visitas_completadas" stackId="a" fill="#174ea6" name="Completadas" />
           </BarChart>
         </ResponsiveContainer>
       </section>

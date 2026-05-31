@@ -171,7 +171,7 @@ export function OptimizadorPage() {
             <button
               type="button"
               onClick={() => setSelectedReps(reponedores.map((rep) => rep.id))}
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-slate-100 px-3 text-sm font-semibold text-slate-700"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-blue-50 px-3 text-sm font-semibold text-skyroute"
             >
               <Check size={16} />
               Todos

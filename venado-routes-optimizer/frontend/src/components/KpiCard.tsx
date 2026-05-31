@@ -15,7 +15,7 @@ export function KpiCard({ title, value, delta, icon: Icon }: Props) {
           <p className="text-sm font-medium text-slate-500">{title}</p>
           <p className="mt-2 text-2xl font-bold text-ink">{value}</p>
         </div>
-        <span className="grid h-10 w-10 place-items-center rounded-md bg-slate-100 text-slate-700">
+        <span className="grid h-10 w-10 place-items-center rounded-md bg-blue-50 text-skyroute">
           <Icon size={20} />
         </span>
       </div>

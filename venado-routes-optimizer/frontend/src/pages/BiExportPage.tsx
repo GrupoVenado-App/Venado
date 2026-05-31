@@ -27,7 +27,7 @@ const EXPORTS: Array<{
     description: "Detalle de cada tarea ejecutada: marca, estado, tiempo real y foto.",
     icon: ListChecks,
     filename: "venado_micro_tareas.csv",
-    accent: "border-green-200 bg-green-50 text-green-700",
+    accent: "border-red-200 bg-red-50 text-red-700",
   },
   {
     tabla: "rutas",
@@ -35,7 +35,7 @@ const EXPORTS: Array<{
     description: "Resumen por reponedor: cobertura, carga de trabajo, kilometros y tiempos.",
     icon: Route,
     filename: "venado_rutas_diarias.csv",
-    accent: "border-amber-200 bg-amber-50 text-amber-700",
+    accent: "border-blue-200 bg-blue-50 text-blue-700",
   },
 ];
 
@@ -114,7 +114,7 @@ export function BiExportPage() {
                 type="button"
                 onClick={() => download(item.tabla, item.filename)}
                 disabled={loading !== null}
-                className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-venado px-4 text-sm font-semibold text-white transition-colors hover:bg-skyroute disabled:opacity-50"
               >
                 <Download size={17} />
                 {loading === item.tabla ? "Generando..." : "Descargar CSV"}

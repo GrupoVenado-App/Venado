@@ -24,7 +24,7 @@ export function LoginPage() {
 
   return (
     <main className="grid min-h-screen place-items-center bg-field px-4">
-      <section className="w-full max-w-md rounded-md border border-slate-200 bg-white p-6 shadow-soft">
+      <section className="w-full max-w-md rounded-md border border-blue-100 bg-white p-6 shadow-soft">
         <div className="mb-6">
           <p className="text-sm font-semibold uppercase text-venado">Industrias Venado</p>
           <h1 className="mt-2 text-2xl font-bold text-ink">Rutas Canal Tradicional</h1>
@@ -36,7 +36,7 @@ export function LoginPage() {
             <input
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-2 h-12 w-full rounded-md border border-slate-300 px-3 outline-none focus:border-slate-900"
+              className="mt-2 h-12 w-full rounded-md border border-slate-300 px-3 outline-none focus:border-venado"
               type="email"
               autoComplete="username"
             />
@@ -46,7 +46,7 @@ export function LoginPage() {
             <input
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="mt-2 h-12 w-full rounded-md border border-slate-300 px-3 outline-none focus:border-slate-900"
+              className="mt-2 h-12 w-full rounded-md border border-slate-300 px-3 outline-none focus:border-venado"
               type="password"
               autoComplete="current-password"
             />
@@ -54,7 +54,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="touch-button w-full rounded-md bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50"
+            className="touch-button w-full rounded-md bg-venado px-4 py-3 font-semibold text-white transition-colors hover:bg-skyroute disabled:opacity-50"
           >
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
@@ -67,7 +67,7 @@ export function LoginPage() {
               setEmail("supervisor.1@venado.local");
               setPassword("supervisor123");
             }}
-            className="touch-button rounded-md bg-slate-100 px-3 text-sm font-semibold text-slate-700"
+            className="touch-button rounded-md bg-blue-50 px-3 text-sm font-semibold text-skyroute"
           >
             Supervisor
           </button>
@@ -77,7 +77,7 @@ export function LoginPage() {
               setEmail("reponedor.1@venado.local");
               setPassword("reponedor123");
             }}
-            className="touch-button rounded-md bg-slate-100 px-3 text-sm font-semibold text-slate-700"
+            className="touch-button rounded-md bg-red-50 px-3 text-sm font-semibold text-venado"
           >
             Reponedor
           </button>

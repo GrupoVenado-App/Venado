@@ -306,31 +306,31 @@ export function VisitaPage() {
       />
 
       {meters !== null && meters > 200 ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+        <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800">
           Te encuentras a {meters.toFixed(0)} metros del PDV. Acercate para iniciar.
         </div>
       ) : meters !== null ? (
-        <div className="rounded-md border border-green-300 bg-green-50 p-3 text-sm font-semibold text-green-800">
+        <div className="rounded-md border border-blue-300 bg-blue-50 p-3 text-sm font-semibold text-blue-800">
           Estas a {meters.toFixed(0)} m del PDV. Puedes iniciar la visita.
         </div>
       ) : null}
       {error ? <div className="rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-600">{error}</div> : null}
 
       {travelStartedAt !== null && !visitInProgress ? (
-        <div className="flex items-center justify-between rounded-md border border-indigo-300 bg-indigo-50 px-4 py-3">
-          <span className="flex items-center gap-2 text-sm font-semibold text-indigo-800">
-            <Timer size={18} className="text-indigo-600" /> Tiempo de viaje
+        <div className="flex items-center justify-between rounded-md border border-blue-300 bg-blue-50 px-4 py-3">
+          <span className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+            <Timer size={18} className="text-blue-600" /> Tiempo de viaje
           </span>
-          <span className="font-mono text-2xl font-bold text-indigo-900">{formatMmSs(travelElapsed)}</span>
+          <span className="font-mono text-2xl font-bold text-blue-900">{formatMmSs(travelElapsed)}</span>
         </div>
       ) : null}
 
       {simulatedTravelMin !== null && !visitInProgress ? (
-        <div className="flex items-center justify-between rounded-md border border-purple-300 bg-purple-50 px-4 py-3">
-          <span className="flex items-center gap-2 text-sm font-semibold text-purple-800">
+        <div className="flex items-center justify-between rounded-md border border-red-300 bg-red-50 px-4 py-3">
+          <span className="flex items-center gap-2 text-sm font-semibold text-red-800">
             <Clock size={18} /> Viaje simulado
           </span>
-          <span className="font-mono text-2xl font-bold text-purple-900">{simulatedTravelMin} min</span>
+          <span className="font-mono text-2xl font-bold text-red-900">{simulatedTravelMin} min</span>
         </div>
       ) : null}
 
@@ -348,7 +348,7 @@ export function VisitaPage() {
               type="button"
               onClick={startTravelTimer}
             disabled={saving || isTraveling || travelStartedAt !== null || simulatedTravelMin !== null}
-              className="touch-button inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 font-semibold text-white shadow-soft disabled:opacity-40"
+              className="touch-button inline-flex items-center justify-center gap-2 rounded-md bg-skyroute px-3 font-semibold text-white shadow-soft disabled:opacity-40"
             >
               <Play size={18} /> Inicio viaje
             </button>
@@ -365,7 +365,7 @@ export function VisitaPage() {
             type="button"
             onClick={iniciar}
             disabled={!canStartVisit}
-            className="touch-button inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-3 font-bold text-white disabled:opacity-40"
+            className="touch-button inline-flex w-full items-center justify-center gap-2 rounded-md bg-venado px-4 py-3 font-bold text-white disabled:opacity-40"
           >
             <Navigation size={19} />
             {simulatedTravelMin !== null
@@ -389,7 +389,7 @@ export function VisitaPage() {
         type="button"
         onClick={finalizar}
         disabled={saving || !visitInProgress || !allTasksDone || visitDone}
-        className="touch-button inline-flex w-full items-center justify-center gap-2 rounded-md bg-green-700 px-4 py-3 font-bold text-white disabled:opacity-40"
+        className="touch-button inline-flex w-full items-center justify-center gap-2 rounded-md bg-skyroute px-4 py-3 font-bold text-white disabled:opacity-40"
       >
         <CheckCircle2 size={20} /> Finalizar visita
       </button>

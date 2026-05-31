@@ -105,7 +105,7 @@ export function ChecklistMicroTareas({ visitaId, disabled = false, onProgress }:
               onClick={() => toggle(item.id)}
               disabled={disabled || loadingId === item.id}
               className={`grid h-11 w-11 shrink-0 place-items-center rounded-md border ${
-                item.completada ? "border-green-600 bg-green-600 text-white" : "border-slate-300 bg-white text-slate-500"
+                item.completada ? "border-skyroute bg-skyroute text-white" : "border-slate-300 bg-white text-slate-500"
               } disabled:opacity-40`}
             >
               <Check size={20} />
@@ -141,7 +141,7 @@ export function ChecklistMicroTareas({ visitaId, disabled = false, onProgress }:
               type="button"
               onClick={() => finish(item.id)}
               disabled={disabled || loadingId === item.id || !item.hora_inicio || item.completada}
-              className="touch-button inline-flex items-center justify-center gap-2 rounded-md bg-ink px-2 text-sm font-semibold text-white disabled:opacity-40"
+              className="touch-button inline-flex items-center justify-center gap-2 rounded-md bg-venado px-2 text-sm font-semibold text-white disabled:opacity-40"
               aria-label="Finalizar tarea"
             >
               <Square size={18} />

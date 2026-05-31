@@ -5,7 +5,7 @@ import { FeatureCollection, TipoCliente } from "../types";
 import { tipoColors } from "../utils/colors";
 
 const center: [number, number] = [-16.5, -68.1193];
-const routePalette = ["#b91c1c", "#2563eb", "#15803d", "#f97316", "#7c3aed", "#0f766e", "#be123c"];
+const routePalette = ["#c8102e", "#174ea6", "#e11d48", "#2563eb", "#9f1239", "#1d4ed8", "#ef4444"];
 
 interface Props {
   pdvs?: FeatureCollection | null;
@@ -124,7 +124,7 @@ export function MapaLaPaz({ pdvs, rutas, currentLocation, navRoute, heightClass 
           <CircleMarker
             center={[currentLocation.latitud, currentLocation.longitud]}
             radius={8}
-            pathOptions={{ color: "#0f172a", weight: 2, fillColor: "#38bdf8", fillOpacity: 0.9 }}
+            pathOptions={{ color: "#0f172a", weight: 2, fillColor: "#2563eb", fillOpacity: 0.9 }}
           >
             <Popup>Ubicación actual</Popup>
           </CircleMarker>

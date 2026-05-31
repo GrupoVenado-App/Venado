@@ -22,7 +22,7 @@ export function FieldLayout() {
           <button
             type="button"
             onClick={logout}
-            className="grid h-11 w-11 place-items-center rounded-md bg-slate-100 text-slate-700"
+            className="grid h-11 w-11 place-items-center rounded-md bg-blue-50 text-skyroute"
             aria-label="Salir"
           >
             <LogOut size={20} />

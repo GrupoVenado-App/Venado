@@ -87,9 +87,9 @@ interface DetalleData {
 }
 
 const ESTADO_COLOR: Record<string, string> = {
-  COMPLETADA: "text-green-700 bg-green-50 border-green-200",
+  COMPLETADA: "text-blue-700 bg-blue-50 border-blue-200",
   EN_PROGRESO: "text-blue-700 bg-blue-50 border-blue-200",
-  EN_TRASLADO: "text-indigo-700 bg-indigo-50 border-indigo-200",
+  EN_TRASLADO: "text-skyroute bg-blue-50 border-blue-200",
   PENDIENTE: "text-slate-600 bg-slate-50 border-slate-200",
   NO_VISITADO: "text-red-700 bg-red-50 border-red-200",
 };
@@ -103,10 +103,10 @@ const ESTADO_LABEL: Record<string, string> = {
 };
 
 const ESTADO_CHART_COLORS: Record<string, string> = {
-  COMPLETADA: "#16a34a",
+  COMPLETADA: "#174ea6",
   EN_PROGRESO: "#2563eb",
-  EN_TRASLADO: "#4f46e5",
-  PENDIENTE: "#f59e0b",
+  EN_TRASLADO: "#1d4ed8",
+  PENDIENTE: "#c8102e",
   NO_VISITADO: "#dc2626",
 };
 
@@ -299,8 +299,8 @@ export function ReponedorDetallePage() {
             Supervisor: {data.reponedor.supervisor} - {data.fecha}
           </p>
         </div>
-        <span className="ml-auto flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-700">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
+        <span className="ml-auto flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-700">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
           En vivo
         </span>
       </div>
@@ -310,12 +310,12 @@ export function ReponedorDetallePage() {
           label="PDVs completados"
           value={`${pdvsCompletados}/${data.visitas.length}`}
           icon={CheckCircle2}
-          color={cobertura >= 80 ? "text-green-700" : cobertura >= 50 ? "text-blue-700" : "text-amber-700"}
+          color={cobertura >= 80 ? "text-blue-700" : cobertura >= 50 ? "text-skyroute" : "text-red-700"}
         />
         <StatCard label="Tiempo en ruta" value={`${data.tiempo_en_ruta_min} min`} icon={Navigation} />
         <StatCard label="Tiempo en PDVs" value={`${data.tiempo_en_microtareas_min} min`} icon={Timer} />
         <StatCard label="Micro-tareas" value={`${data.micro_tareas_completadas}/${data.micro_tareas_total}`} icon={Clock} />
-        <StatCard label="Fotos" value={data.fotos_total} icon={Camera} color="text-indigo-700" />
+        <StatCard label="Fotos" value={data.fotos_total} icon={Camera} color="text-skyroute" />
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -350,14 +350,14 @@ export function ReponedorDetallePage() {
       </section>
 
       {hasPlannedRoute && hasRealRoute ? (
-        <section className="rounded-lg border border-green-200 bg-green-50 p-4 shadow-sm">
+        <section className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-bold text-green-800">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-blue-800">
               <Route size={16} /> {rutaCompletada ? "Ruta completada" : "Avance de ruta"} - Comparacion planificada vs real
             </h2>
             <button
               onClick={() => setShowComparacion(!showComparacion)}
-              className="rounded-lg bg-green-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-800"
+              className="rounded-lg bg-skyroute px-3 py-1.5 text-xs font-bold text-white hover:bg-venado"
             >
               {showComparacion ? "Ocultar" : "Ver comparacion"}
             </button>
@@ -365,7 +365,7 @@ export function ReponedorDetallePage() {
           {showComparacion ? (
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <p className="mb-2 text-xs font-bold text-green-700">Ruta planificada ({data.ruta_planificada_ors ? "ORS" : "local"})</p>
+                <p className="mb-2 text-xs font-bold text-red-700">Ruta planificada ({data.ruta_planificada_ors ? "ORS" : "local"})</p>
                 <MapaLaPaz pdvs={mapData.pdvs} rutas={mapData.rutaPlanificada} heightClass="h-[280px]" zoom={13} />
               </div>
               <div>
@@ -409,7 +409,7 @@ export function ReponedorDetallePage() {
             </PieChart>
           </ResponsiveContainer>
           {data.desviaciones_tiempo > 0 ? (
-            <p className="mt-2 flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
+            <p className="mt-2 flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
               <AlertTriangle size={13} /> {data.desviaciones_tiempo} desvio(s) de tiempo detectados
             </p>
           ) : null}
@@ -499,7 +499,7 @@ export function ReponedorDetallePage() {
                       <div key={idx} className="flex items-center justify-between gap-2 rounded-lg bg-white/60 px-2 py-1 text-xs">
                         <div className="flex min-w-0 items-center gap-1.5">
                           {e.completada ? (
-                            <CheckCircle2 size={12} className="shrink-0 text-green-600" />
+                            <CheckCircle2 size={12} className="shrink-0 text-blue-600" />
                           ) : (
                             <XCircle size={12} className="shrink-0 text-slate-400" />
                           )}

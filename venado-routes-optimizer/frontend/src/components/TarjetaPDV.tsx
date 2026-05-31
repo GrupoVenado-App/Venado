@@ -36,7 +36,7 @@ export function TarjetaPDV({ visita }: { visita: Visita }) {
 
       <Link
         to={`/app/visita/${visita.id}`}
-        className="touch-button mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white"
+        className="touch-button mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-skyroute px-4 py-3 text-sm font-semibold text-white"
       >
         <Play size={18} />
         {visita.estado === "EN_PROGRESO" ? "Continuar visita" : "Abrir visita"}
