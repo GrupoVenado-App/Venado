@@ -1,0 +1,16 @@
+<svg width="640" height="360" viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Grupo Venado</title>
+  <desc id="desc">Logo rojo y blanco de Grupo Venado con simbolo V y venado.</desc>
+  <rect width="640" height="360" rx="18" fill="#C8102E"/>
+  <path d="M45 103H224L198 165H68L45 103Z" fill="white"/>
+  <path d="M82 206H192L230 296H119L82 206Z" fill="white"/>
+  <path d="M224 103H331L248 296H139L224 103Z" fill="white"/>
+  <path d="M246 188C254 178 267 173 281 176C294 179 304 189 307 202C311 218 303 234 289 241L295 260H271L278 243C266 239 257 230 253 218L236 209L246 188Z" fill="#C8102E"/>
+  <circle cx="280" cy="208" r="15" fill="white"/>
+  <path d="M269 205C255 190 248 174 248 158M291 205C306 190 314 174 315 158M252 174C239 167 229 156 224 142M311 174C324 167 334 156 339 142M260 185C248 181 238 174 230 164M302 185C315 181 325 174 333 164" stroke="#C8102E" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="274" cy="205" r="3.2" fill="#C8102E"/>
+  <circle cx="286" cy="205" r="3.2" fill="#C8102E"/>
+  <path d="M278 215L282 215L280 220L278 215Z" fill="#C8102E"/>
+  <text x="374" y="143" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700">GRUPO</text>
+  <text x="374" y="212" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="900">VENADO</text>
+</svg>

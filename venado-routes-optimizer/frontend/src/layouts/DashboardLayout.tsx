@@ -3,7 +3,6 @@ import {
   Download,
   FileText,
   GitBranch,
-  LayoutDashboard,
   LogOut,
   MapPinned,
   Route,
@@ -11,6 +10,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { clearSession } from "../api/client";
+import { BrandLogo } from "../components/BrandLogo";
 
 const links = [
   { to: "/dashboard/mapa", label: "Mapa", icon: MapPinned },
@@ -36,9 +36,9 @@ export function DashboardLayout() {
       <aside className="hidden border-r border-slate-200 bg-white lg:block">
         <div className="flex min-h-screen flex-col p-4">
           <div className="mb-6 flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-md bg-venado text-white">
-              <LayoutDashboard size={21} />
-            </span>
+            <div className="flex h-14 w-20 items-center justify-center overflow-hidden rounded-md bg-venado shadow-sm">
+              <BrandLogo className="h-full w-full object-contain" />
+            </div>
             <div>
               <p className="text-xs font-semibold uppercase text-slate-500">Trade La Paz</p>
               <h1 className="font-bold text-ink">Venado Rutas</h1>
@@ -80,7 +80,10 @@ export function DashboardLayout() {
       <div className="min-w-0">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
           <div className="flex items-center justify-between">
-            <strong>Venado Rutas</strong>
+            <div className="flex items-center gap-3">
+              <BrandLogo className="h-10 w-16 rounded-md object-contain" />
+              <strong>Venado Rutas</strong>
+            </div>
             <button className="grid h-10 w-10 place-items-center rounded-md bg-blue-50 text-skyroute" onClick={logout} aria-label="Salir">
               <LogOut size={18} />
             </button>

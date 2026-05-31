@@ -1,6 +1,7 @@
 import { ClipboardList, LogOut, Map, UserRound } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { clearSession } from "../api/client";
+import { BrandLogo } from "../components/BrandLogo";
 
 export function FieldLayout() {
   const navigate = useNavigate();
@@ -15,9 +16,12 @@ export function FieldLayout() {
     <div className="min-h-screen bg-field pb-20">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Industrias Venado</p>
-            <h1 className="text-lg font-bold text-ink">{user.nombre || "Reponedor"}</h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <BrandLogo className="h-11 w-16 shrink-0 rounded-md object-contain" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase text-slate-500">Industrias Venado</p>
+              <h1 className="truncate text-lg font-bold text-ink">{user.nombre || "Reponedor"}</h1>
+            </div>
           </div>
           <button
             type="button"
