@@ -157,7 +157,7 @@ export function ReportesPage() {
         type: "Feature" as const,
         geometry: {
           type: "Point" as const,
-          coordinates: [r.ultima_ubicacion!.longitud, r.ultima_ubicacion!.latitud],
+          coordinates: [r.ultima_ubicacion!.longitud, r.ultima_ubicacion!.latitud] as [number, number],
         },
         properties: {
           id: r.id,

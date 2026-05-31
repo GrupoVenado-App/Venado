@@ -9,6 +9,7 @@ export const tipoColors: Record<TipoCliente, { bg: string; text: string; dot: st
 
 export const estadoClasses = {
   PENDIENTE: "border-slate-200 bg-white",
+  EN_TRASLADO: "border-indigo-300 bg-indigo-50",
   EN_PROGRESO: "border-amber-300 bg-amber-50",
   COMPLETADA: "border-green-300 bg-green-50",
   NO_VISITADO: "border-slate-300 bg-slate-100",

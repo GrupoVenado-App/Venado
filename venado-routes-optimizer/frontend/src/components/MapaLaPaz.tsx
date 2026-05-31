@@ -1,4 +1,6 @@
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from "react-leaflet";
+import L from "leaflet";
+import { useEffect } from "react";
+import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import { FeatureCollection, TipoCliente } from "../types";
 import { tipoColors } from "../utils/colors";
 
@@ -15,10 +17,58 @@ interface Props {
   zoom?: number;
 }
 
+function collectLatLngs(
+  pdvs?: FeatureCollection | null,
+  rutas?: FeatureCollection | null,
+  currentLocation?: { latitud: number; longitud: number } | null,
+  navRoute?: [number, number][] | null,
+) {
+  const points: [number, number][] = [];
+  if (currentLocation) points.push([currentLocation.latitud, currentLocation.longitud]);
+  navRoute?.forEach(([lng, lat]) => points.push([lat, lng]));
+  pdvs?.features.forEach((feature) => {
+    if (feature.geometry.type === "Point") {
+      const [lng, lat] = feature.geometry.coordinates as [number, number];
+      points.push([lat, lng]);
+    }
+  });
+  rutas?.features.forEach((feature) => {
+    if (feature.geometry.type === "LineString") {
+      (feature.geometry.coordinates as Array<[number, number]>).forEach(([lng, lat]) => points.push([lat, lng]));
+    }
+  });
+  return points;
+}
+
+function AutoFitMap({ pdvs, rutas, currentLocation, navRoute }: Props) {
+  const map = useMap();
+  const signature = JSON.stringify({
+    pdvs: pdvs?.features.length || 0,
+    rutas: rutas?.features.length || 0,
+    currentLocation,
+    navRouteFirst: navRoute?.[0],
+    navRouteLast: navRoute?.[navRoute.length - 1],
+  });
+
+  useEffect(() => {
+    const points = collectLatLngs(pdvs, rutas, currentLocation, navRoute);
+    if (points.length === 1) {
+      map.setView(points[0], 15);
+      return;
+    }
+    if (points.length > 1) {
+      map.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 16 });
+    }
+  }, [map, signature]);
+
+  return null;
+}
+
 export function MapaLaPaz({ pdvs, rutas, currentLocation, navRoute, heightClass = "h-[560px]", zoom = 13 }: Props) {
   return (
     <div className={`${heightClass} overflow-hidden rounded-md border border-slate-200 bg-white`}>
       <MapContainer center={center} zoom={zoom} scrollWheelZoom>
+        <AutoFitMap pdvs={pdvs} rutas={rutas} currentLocation={currentLocation} navRoute={navRoute} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -31,7 +81,7 @@ export function MapaLaPaz({ pdvs, rutas, currentLocation, navRoute, heightClass 
           return (
             <Polyline
               key={`route-${index}`}
-              pathOptions={{ color: routePalette[index % routePalette.length], weight: 4, opacity: 0.78 }}
+              pathOptions={{ color: routePalette[index % routePalette.length], weight: 6, opacity: 0.82 }}
               positions={coords.map(([lng, lat]) => [lat, lng])}
             />
           );
@@ -40,7 +90,7 @@ export function MapaLaPaz({ pdvs, rutas, currentLocation, navRoute, heightClass 
         {/* Live navigation route: currentLocation → PDV (dashed blue) */}
         {navRoute && navRoute.length >= 2 && (
           <Polyline
-            pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.85, dashArray: "10 8" }}
+            pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.9, dashArray: "8 7" }}
             positions={navRoute.map(([lng, lat]) => [lat, lng])}
           />
         )}

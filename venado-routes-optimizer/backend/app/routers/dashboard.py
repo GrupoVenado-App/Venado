@@ -347,6 +347,7 @@ def reponedor_detalle(
                 "tiempo_real_min": ej.tiempo_real_min,
                 "hora_inicio": ej.hora_inicio.isoformat() if ej.hora_inicio else None,
                 "hora_fin": ej.hora_fin.isoformat() if ej.hora_fin else None,
+                "foto_evidencia_url": ej.foto_evidencia_url,
             }
             for ej in v.ejecuciones
         ]
@@ -362,32 +363,34 @@ def reponedor_detalle(
                 "pdv_tipo_cliente": v.pdv.tipo_cliente.value,
                 "pdv_latitud": v.pdv.latitud,
                 "pdv_longitud": v.pdv.longitud,
+                "pdv_tiempo_estimado_min": v.pdv.tiempo_visita_estimado_min,
                 "hora_inicio_real": v.hora_inicio_real.isoformat() if v.hora_inicio_real else None,
                 "hora_fin_real": v.hora_fin_real.isoformat() if v.hora_fin_real else None,
                 "tiempo_ejecucion_min": v.tiempo_ejecucion_min,
                 "tiempo_traslado_real_min": v.tiempo_traslado_real_min,
+                "tiempo_traslado_planificado_min": v.tiempo_traslado_desde_anterior_min,
+                "distancia_planificada_km": v.distancia_desde_anterior_km,
+                "traslado_fuente": v.traslado_fuente,
                 "checkin_latitud": checkin_lat,
                 "checkin_longitud": checkin_lng,
                 "ejecuciones": ejecuciones_list,
             }
         )
 
-    # Coordenadas planificadas desde pdvs_ordenados del JSON de la ruta
-    ruta_planificada_coords = []
-    if ruta and ruta.pdvs_ordenados:
-        for pdv_entry in ruta.pdvs_ordenados:
-            if isinstance(pdv_entry, dict):
-                lng = pdv_entry.get("longitud")
-                lat = pdv_entry.get("latitud")
-                if lng is not None and lat is not None:
-                    ruta_planificada_coords.append([lng, lat])
+    # Planned route from the ordered PDV visits. Older route JSON records do not
+    # include lat/lng, so the visits table is the reliable source.
+    planned_waypoints = [(v.pdv.longitud, v.pdv.latitud) for v in visitas_ordenadas]
+    planned_road_coords = get_ors_route_geometry(planned_waypoints) if len(planned_waypoints) >= 2 else None
+    ruta_planificada_coords = planned_road_coords or [[lng, lat] for lng, lat in planned_waypoints]
 
     # Coordenadas reales desde visitas con checkin, ordenadas por orden_planificado
-    ruta_real_coords = [
-        [v["checkin_longitud"], v["checkin_latitud"]]
+    real_waypoints = [
+        (v["checkin_longitud"], v["checkin_latitud"])
         for v in visitas_list
         if v["checkin_longitud"] is not None and v["checkin_latitud"] is not None
     ]
+    real_road_coords = get_ors_route_geometry(real_waypoints) if len(real_waypoints) >= 2 else None
+    ruta_real_coords = real_road_coords or [[lng, lat] for lng, lat in real_waypoints]
 
     # Tiempos agregados
     tiempo_en_ruta_min = sum(
@@ -403,6 +406,14 @@ def reponedor_detalle(
     todas_ejecuciones = [ej for v in visitas_ordenadas for ej in v.ejecuciones]
     micro_total = len(todas_ejecuciones)
     micro_completadas = sum(1 for ej in todas_ejecuciones if ej.completada)
+    fotos_total = sum(1 for ej in todas_ejecuciones if ej.foto_evidencia_url)
+    desviaciones_tiempo = sum(
+        1
+        for v in visitas_ordenadas
+        if v.tiempo_ejecucion_min
+        and v.pdv.tiempo_visita_estimado_min
+        and v.tiempo_ejecucion_min > v.pdv.tiempo_visita_estimado_min * 1.5
+    )
 
     ruta_dict = None
     if ruta:
@@ -432,8 +443,12 @@ def reponedor_detalle(
         "visitas": visitas_list,
         "ruta_planificada_coords": ruta_planificada_coords,
         "ruta_real_coords": ruta_real_coords,
+        "ruta_planificada_ors": planned_road_coords is not None,
+        "ruta_real_ors": real_road_coords is not None,
         "tiempo_en_ruta_min": int(tiempo_en_ruta_min),
         "tiempo_en_microtareas_min": int(tiempo_en_microtareas_min),
         "micro_tareas_total": micro_total,
         "micro_tareas_completadas": micro_completadas,
+        "fotos_total": fotos_total,
+        "desviaciones_tiempo": desviaciones_tiempo,
     }

@@ -9,7 +9,7 @@ import { FeatureCollection, Ruta } from "../types";
 interface GeometriaResponse {
   ruta_id: string;
   ors_geometry: boolean;
-  geometry: { type: string; coordinates: number[][] };
+  geometry: { type: string; coordinates: Array<[number, number]> };
 }
 
 export function RutaMapaPage() {
@@ -17,7 +17,7 @@ export function RutaMapaPage() {
   const [loading, setLoading] = useState(true);
   const [fecha, setFecha] = useGlobalFecha();
   // Map of ruta_id → road geometry coordinates from ORS
-  const [rutasGeometria, setRutasGeometria] = useState<Record<string, number[][]>>({});
+  const [rutasGeometria, setRutasGeometria] = useState<Record<string, Array<[number, number]>>>({});
   const [loadingGeo, setLoadingGeo] = useState(false);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function RutaMapaPage() {
                 .catch(() => ({ id: ruta.id, coords: null }))
             )
           ).then((results) => {
-            const map: Record<string, number[][]> = {};
+            const map: Record<string, Array<[number, number]>> = {};
             results.forEach(({ id, coords }) => {
               if (coords) map[id] = coords;
             });
@@ -75,7 +75,7 @@ export function RutaMapaPage() {
       features: rutas.map((ruta) => {
         // Use real road geometry from ORS if available, else fall back to straight line
         const roadCoords = rutasGeometria[ruta.id];
-        const coords = roadCoords
+        const coords: Array<[number, number]> = roadCoords
           ? roadCoords
           : [...ruta.visitas]
               .sort((a, b) => a.orden_planificado - b.orden_planificado)

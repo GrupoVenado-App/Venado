@@ -8,6 +8,7 @@ from app.auth import require_role
 from app.database import get_db
 from app.models import Reponedor, Ruta, Visita
 from app.schemas import OptimizarRequest
+from app.services.geocalc import haversine_meters, traslado_minutos
 from app.services.optimizador import optimizar_rutas
 from app.services.openrouteservice import get_ors_route_geometry
 
@@ -145,11 +146,19 @@ def geometria_punto_a_punto(
     # Also compute estimated travel time
     from app.services.openrouteservice import estimate_leg
     leg = estimate_leg(olng, olat, dlng, dlat)
+    if leg["distancia_km"] is None:
+        distancia_km = haversine_meters(olat, olng, dlat, dlng) / 1000
+        leg = {
+            "distancia_km": round(distancia_km, 2),
+            "duracion_min": max(1, round(traslado_minutos(distancia_km))),
+            "fuente": "LOCAL",
+        }
     return {
         "ors_geometry": road_coords is not None,
         "geometry": {"type": "LineString", "coordinates": coords},
         "distancia_km": leg["distancia_km"],
         "duracion_min": leg["duracion_min"],
+        "fuente": leg.get("fuente", "LOCAL"),
     }
 
 

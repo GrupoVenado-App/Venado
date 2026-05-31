@@ -24,8 +24,19 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, value: list[AnyHttpUrl] | str) -> list[str] | str:
+        if value == "*":
+            return ["*"]
         if isinstance(value, str) and not value.startswith("["):
             return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        if isinstance(value, str) and value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql+psycopg2://", 1)
+        if isinstance(value, str) and value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+psycopg2://", 1)
         return value
 
 

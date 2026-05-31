@@ -1,5 +1,5 @@
 import math
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -103,8 +103,14 @@ def serialize_visita(visita: Visita) -> dict:
         "hora_inicio_real": visita.hora_inicio_real.isoformat() if visita.hora_inicio_real else None,
         "hora_fin_real": visita.hora_fin_real.isoformat() if visita.hora_fin_real else None,
         "tiempo_ejecucion_min": visita.tiempo_ejecucion_min,
+        "hora_inicio_traslado": visita.hora_inicio_traslado.isoformat() if visita.hora_inicio_traslado else None,
+        "hora_fin_traslado": visita.hora_fin_traslado.isoformat() if visita.hora_fin_traslado else None,
+        "tiempo_traslado_real_min": visita.tiempo_traslado_real_min,
         "distancia_desde_anterior_km": visita.distancia_desde_anterior_km,
         "tiempo_traslado_desde_anterior_min": visita.tiempo_traslado_desde_anterior_min,
+        "ors_distancia_desde_anterior_km": visita.ors_distancia_desde_anterior_km,
+        "ors_tiempo_traslado_desde_anterior_min": visita.ors_tiempo_traslado_desde_anterior_min,
+        "traslado_fuente": visita.traslado_fuente,
         "foto_url": visita.foto_url,
         "pdv": {
             "id": str(visita.pdv.id),
@@ -138,6 +144,8 @@ def iniciar_visita(
     visita = get_visita_or_404(db, visita_id)
     if visita.hora_inicio_real:
         raise HTTPException(status_code=400, detail="La visita ya fue iniciada")
+    if visita.estado not in (VisitaEstado.PENDIENTE, VisitaEstado.EN_TRASLADO):
+        raise HTTPException(status_code=400, detail="La visita no esta disponible para iniciar")
 
     distance_m = distance_to_pdv_meters(db, visita, payload.latitud, payload.longitud)
     if distance_m > 200:
@@ -148,14 +156,48 @@ def iniciar_visita(
     visita.coordenada_checkin = point_from_lng_lat(payload.longitud, payload.latitud)
     visita.estado = VisitaEstado.EN_PROGRESO
     # Save travel time from chronometer or simulation
-    if payload.tiempo_traslado_real_min is not None:
-        visita.tiempo_traslado_real_min = payload.tiempo_traslado_real_min
-        visita.hora_inicio_traslado = datetime.now(UTC)
+    if payload.tiempo_traslado_real_min is not None or visita.hora_inicio_traslado:
+        travel_min = payload.tiempo_traslado_real_min
+        if travel_min is None and visita.hora_inicio_traslado:
+            travel_min = max(1, math.ceil((now - visita.hora_inicio_traslado).total_seconds() / 60))
+        visita.tiempo_traslado_real_min = travel_min
+        if travel_min is not None and not visita.hora_inicio_traslado:
+            visita.hora_inicio_traslado = now - timedelta(minutes=travel_min)
         visita.hora_fin_traslado = now
+        if payload.origen_latitud is not None and payload.origen_longitud is not None:
+            visita.coordenada_inicio_traslado = point_from_lng_lat(payload.origen_longitud, payload.origen_latitud)
+        visita.coordenada_fin_traslado = point_from_lng_lat(payload.longitud, payload.latitud)
     if visita.ruta.estado == RutaEstado.PLANIFICADA:
         visita.ruta.estado = RutaEstado.EN_EJECUCION
     db.commit()
     return {"ok": True, "estado": visita.estado.value, "distancia_m": round(distance_m, 1), "hora_inicio": now.isoformat()}
+
+
+@router.post("/{visita_id}/iniciar-traslado")
+def iniciar_traslado(
+    visita_id: UUID,
+    payload: LocationIn,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("reponedor")),
+) -> dict:
+    visita = get_visita_or_404(db, visita_id)
+    if visita.hora_inicio_real:
+        raise HTTPException(status_code=400, detail="La visita ya fue iniciada")
+    if visita.hora_inicio_traslado:
+        return {
+            "ok": True,
+            "estado": visita.estado.value,
+            "hora_inicio_traslado": visita.hora_inicio_traslado.isoformat(),
+        }
+
+    now = datetime.now(UTC)
+    visita.hora_inicio_traslado = now
+    visita.coordenada_inicio_traslado = point_from_lng_lat(payload.longitud, payload.latitud)
+    visita.estado = VisitaEstado.EN_TRASLADO
+    if visita.ruta.estado == RutaEstado.PLANIFICADA:
+        visita.ruta.estado = RutaEstado.EN_EJECUCION
+    db.commit()
+    return {"ok": True, "estado": visita.estado.value, "hora_inicio_traslado": now.isoformat()}
 
 
 @router.post("/{visita_id}/finalizar")

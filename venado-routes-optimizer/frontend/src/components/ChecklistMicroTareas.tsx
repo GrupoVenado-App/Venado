@@ -1,7 +1,7 @@
-import { Camera, Check, Play, Square } from "lucide-react";
+import { Camera, Check, ImageIcon, Play, Square } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { api } from "../api/client";
+import { api, assetUrl } from "../api/client";
 import { MicroTareaEjecucion } from "../types";
 
 interface Props {
@@ -40,31 +40,58 @@ export function ChecklistMicroTareas({ visitaId, disabled = false, onProgress }:
 
   async function start(id: string) {
     setLoadingId(id);
-    await api.post(`/ejecuciones-micro-tarea/${id}/iniciar`);
-    await load();
-    setLoadingId(null);
+    try {
+      await api.post(`/ejecuciones-micro-tarea/${id}/iniciar`);
+      await load();
+    } finally {
+      setLoadingId(null);
+    }
   }
 
   async function finish(id: string, file?: File) {
     setLoadingId(id);
-    const payload = file ? { foto_base64: await fileToBase64(file) } : {};
-    await api.post(`/ejecuciones-micro-tarea/${id}/finalizar`, payload);
-    await load();
-    toast.success("Micro-tarea completada");
-    setLoadingId(null);
+    try {
+      const item = items.find((task) => task.id === id);
+      if (item && !item.hora_inicio) {
+        await api.post(`/ejecuciones-micro-tarea/${id}/iniciar`);
+      }
+      const payload = file ? { foto_base64: await fileToBase64(file) } : {};
+      await api.post(`/ejecuciones-micro-tarea/${id}/finalizar`, payload);
+      await load();
+      toast.success(file ? "Foto guardada y micro-tarea completada" : "Micro-tarea completada");
+    } finally {
+      setLoadingId(null);
+    }
   }
 
   async function toggle(id: string) {
     setLoadingId(id);
-    await api.post(`/ejecuciones-micro-tarea/${id}/completar`);
-    await load();
-    setLoadingId(null);
+    try {
+      await api.post(`/ejecuciones-micro-tarea/${id}/completar`);
+      await load();
+    } finally {
+      setLoadingId(null);
+    }
   }
 
   return (
     <div className="space-y-3">
       {items.map((item) => (
         <article key={item.id} className="rounded-md border border-slate-200 bg-white p-4 shadow-soft">
+          {item.foto_evidencia_url ? (
+            <a
+              href={assetUrl(item.foto_evidencia_url) || "#"}
+              target="_blank"
+              rel="noreferrer"
+              className="mb-3 block overflow-hidden rounded-md border border-slate-200 bg-slate-50"
+            >
+              <img
+                src={assetUrl(item.foto_evidencia_url) || ""}
+                alt={`Evidencia de ${item.nombre}`}
+                className="h-36 w-full object-cover"
+              />
+            </a>
+          ) : null}
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="font-semibold text-ink">{item.nombre}</h3>
@@ -97,13 +124,13 @@ export function ChecklistMicroTareas({ visitaId, disabled = false, onProgress }:
               Iniciar
             </button>
             <label className="touch-button inline-flex cursor-pointer items-center justify-center rounded-md bg-slate-100 text-slate-700">
-              <Camera size={18} />
+              {item.foto_evidencia_url ? <ImageIcon size={18} /> : <Camera size={18} />}
               <input
                 className="hidden"
                 type="file"
                 accept="image/*"
                 capture="environment"
-                disabled={disabled}
+                disabled={disabled || loadingId === item.id}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) finish(item.id, file);

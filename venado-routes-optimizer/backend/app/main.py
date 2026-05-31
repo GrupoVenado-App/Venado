@@ -1,6 +1,8 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -50,3 +52,18 @@ app.include_router(ejecuciones.router)
 app.include_router(dashboard.router)
 app.include_router(reportes.router)
 app.include_router(feedback.router)
+
+
+frontend_dist = os.getenv("FRONTEND_DIST_DIR")
+if frontend_dist and Path(frontend_dist).exists():
+    dist_path = Path(frontend_dist)
+    assets_path = dist_path / "assets"
+    if assets_path.exists():
+        app.mount("/assets", StaticFiles(directory=assets_path), name="frontend-assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def serve_frontend(full_path: str):
+        requested = dist_path / full_path
+        if full_path and requested.is_file():
+            return FileResponse(requested)
+        return FileResponse(dist_path / "index.html")
