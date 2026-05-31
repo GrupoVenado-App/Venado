@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: venado-routes-optimizer
+    runtime: docker
+    plan: free
+    dockerfilePath: ./venado-routes-optimizer/Dockerfile.render
+    dockerContext: ./venado-routes-optimizer
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: venado-postgis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: SEED_ON_START
+        value: "true"
+      - key: UPLOAD_DIR
+        value: /app/uploads
+      - key: ORS_API_KEY
+        sync: false
+
+databases:
+  - name: venado-postgis
+    databaseName: venado
+    user: venado
+    plan: free
+    postgresMajorVersion: "15"

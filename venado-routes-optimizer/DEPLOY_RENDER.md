@@ -21,11 +21,12 @@ git push origin master
 
 2. En Render abre **New > Blueprint**.
 3. Conecta el repositorio `Innova-Hack/Venado`.
-4. Render detectara `render.yaml` y creara:
+4. En **Blueprint Path** deja `render.yaml` o el campo vacio. Ese archivo esta en la raiz del repo.
+5. Render detectara `render.yaml` y creara:
    - Servicio web Docker: frontend + backend.
    - Base PostgreSQL: `venado-postgis`.
-5. Cuando pida `ORS_API_KEY`, pega tu API key de OpenRouteService.
-6. Crea el Blueprint y espera el primer deploy.
+6. Cuando pida `ORS_API_KEY`, pega tu API key de OpenRouteService.
+7. Crea el Blueprint y espera el primer deploy.
 
 La URL publica de Render sera la web. La API quedara en la misma URL, por ejemplo:
 
