@@ -1,16 +1,21 @@
-<svg width="640" height="360" viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+<svg width="1600" height="1200" viewBox="0 0 1600 1200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">Grupo Venado</title>
-  <desc id="desc">Logo rojo y blanco de Grupo Venado con simbolo V y venado.</desc>
-  <rect width="640" height="360" rx="18" fill="#C8102E"/>
-  <path d="M45 103H224L198 165H68L45 103Z" fill="white"/>
-  <path d="M82 206H192L230 296H119L82 206Z" fill="white"/>
-  <path d="M224 103H331L248 296H139L224 103Z" fill="white"/>
-  <path d="M246 188C254 178 267 173 281 176C294 179 304 189 307 202C311 218 303 234 289 241L295 260H271L278 243C266 239 257 230 253 218L236 209L246 188Z" fill="#C8102E"/>
-  <circle cx="280" cy="208" r="15" fill="white"/>
-  <path d="M269 205C255 190 248 174 248 158M291 205C306 190 314 174 315 158M252 174C239 167 229 156 224 142M311 174C324 167 334 156 339 142M260 185C248 181 238 174 230 164M302 185C315 181 325 174 333 164" stroke="#C8102E" stroke-width="9" stroke-linecap="round"/>
-  <circle cx="274" cy="205" r="3.2" fill="#C8102E"/>
-  <circle cx="286" cy="205" r="3.2" fill="#C8102E"/>
-  <path d="M278 215L282 215L280 220L278 215Z" fill="#C8102E"/>
-  <text x="374" y="143" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700">GRUPO</text>
-  <text x="374" y="212" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="900">VENADO</text>
+  <desc id="desc">Logo rojo y blanco de Grupo Venado con V, venado y texto institucional.</desc>
+  <rect width="1600" height="1200" fill="#E30613"/>
+
+  <path d="M303 461H636C666 461 674 476 684 508L724 649H371L303 461Z" fill="white"/>
+  <path d="M384 689H714L781 1120H623C578 1120 548 1097 534 1055L384 689Z" fill="white"/>
+  <path d="M889 689H1226L1040 1082C1027 1108 1003 1120 969 1120H819L889 689Z" fill="white"/>
+  <path d="M714 689H889L807 996C800 1022 790 1022 783 996L714 689Z" fill="white"/>
+
+  <path d="M770 847C759 812 740 781 722 759C707 738 704 716 718 713C733 710 745 735 755 759C768 790 788 813 807 827C828 812 849 789 863 758C874 733 888 707 902 713C916 719 911 741 896 760C878 784 859 814 848 848C879 842 904 817 927 788C942 768 955 753 967 762C979 771 968 794 952 812C928 840 899 862 870 869C898 873 923 865 948 846C962 835 975 830 982 841C989 852 978 867 961 879C934 898 903 911 867 907C879 920 887 936 888 958C889 980 877 995 858 1003C843 1010 827 1003 807 983C786 1003 770 1010 754 1003C735 995 724 980 725 958C726 936 735 920 747 907C712 912 680 899 653 879C636 867 625 852 632 841C639 830 652 835 666 846C691 865 716 873 744 869C715 862 686 840 662 812C646 794 635 771 647 762C659 753 672 768 687 788C710 817 739 842 770 847Z" fill="#E30613"/>
+  <path d="M807 982C788 961 781 935 789 906C794 886 802 872 807 859C812 872 820 886 825 906C833 935 826 961 807 982Z" fill="#E30613"/>
+  <path d="M759 947C779 948 793 955 801 968C793 973 781 974 770 970C759 965 753 957 759 947Z" fill="white"/>
+  <path d="M855 947C835 948 821 955 813 968C821 973 833 974 844 970C855 965 861 957 855 947Z" fill="white"/>
+  <path d="M787 1003C799 1011 815 1011 827 1003C821 1024 793 1024 787 1003Z" fill="white"/>
+  <path d="M789 981H825C823 996 815 1004 807 1004C799 1004 791 996 789 981Z" fill="white"/>
+  <path d="M795 1018C803 1023 811 1023 819 1018" stroke="white" stroke-width="8" stroke-linecap="round"/>
+
+  <text x="910" y="478" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="300" letter-spacing="24">GRUPO</text>
+  <text x="760" y="604" fill="white" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="140" font-weight="900" letter-spacing="8">VENADO</text>
 </svg>
