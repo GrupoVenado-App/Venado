@@ -1,6 +1,5 @@
 import {
   BarChart3,
-  ClipboardCheck,
   Download,
   FileText,
   GitBranch,
@@ -8,6 +7,7 @@ import {
   LogOut,
   MapPinned,
   Route,
+  ShieldAlert,
   Users,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -19,7 +19,7 @@ const links = [
   { to: "/dashboard/reponedores", label: "Reponedores", icon: Users },
   { to: "/dashboard/mercados", label: "Mercados", icon: BarChart3 },
   { to: "/dashboard/reportes", label: "Reportes", icon: FileText },
-  { to: "/dashboard/dmaic", label: "DMAIC", icon: ClipboardCheck },
+  { to: "/dashboard/calidad", label: "Calidad", icon: ShieldAlert },
   { to: "/dashboard/bi-export", label: "BI Export", icon: Download },
   { to: "/optimizador", label: "Optimizador", icon: GitBranch },
 ];

@@ -1,6 +1,9 @@
 import {
+  AlertTriangle,
+  Camera,
   CheckCircle2,
   Clock,
+  ClipboardPlus,
   LocateFixed,
   MapPin,
   Navigation,
@@ -52,6 +55,43 @@ interface GeometryResponse {
   fuente?: string;
 }
 
+interface Incidencia {
+  id: string;
+  categoria: string;
+  severidad: string;
+  estado: string;
+  descripcion: string;
+  accion_tomada: string;
+  afecta_entrega: boolean;
+  cantidad_afectada: number;
+  foto_url?: string | null;
+  created_at?: string | null;
+}
+
+const CATEGORIAS_INCIDENCIA = [
+  { value: "FALTANTE_STOCK", label: "Faltante de stock" },
+  { value: "PRODUCTO_DANADO", label: "Producto dañado" },
+  { value: "MATERIAL_POP_DANADO", label: "Material POP dañado" },
+  { value: "EXHIBICION_BLOQUEADA", label: "Exhibición bloqueada" },
+  { value: "PRECIO_INCORRECTO", label: "Precio incorrecto" },
+  { value: "ENTREGA_INCOMPLETA", label: "Entrega incompleta" },
+  { value: "PDV_CERRADO", label: "PDV cerrado" },
+  { value: "RECHAZO_CLIENTE", label: "Rechazo del cliente" },
+  { value: "COMPETENCIA_INVASIVA", label: "Competencia invasiva" },
+  { value: "OTRO", label: "Otro" },
+];
+
+const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS_INCIDENCIA.map((item) => [item.value, item.label]));
+
+function readFileAsBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export function VisitaPage() {
   const { visitaId } = useParams();
   const navigate = useNavigate();
@@ -65,6 +105,17 @@ export function VisitaPage() {
   const [travelOrigin, setTravelOrigin] = useState<{ latitud: number; longitud: number } | null>(null);
   const [navRoute, setNavRoute] = useState<NavRouteData | null>(null);
   const [loadingNav, setLoadingNav] = useState(false);
+  const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
+  const [incidentSaving, setIncidentSaving] = useState(false);
+  const [incidentForm, setIncidentForm] = useState({
+    categoria: "FALTANTE_STOCK",
+    severidad: "MEDIA",
+    descripcion: "",
+    accion_tomada: "",
+    afecta_entrega: false,
+    cantidad_afectada: 0,
+    foto_base64: "",
+  });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastNavFetch = useRef("");
 
@@ -73,8 +124,14 @@ export function VisitaPage() {
     setVisita(data);
   }
 
+  async function loadIncidencias() {
+    const { data } = await api.get<Incidencia[]>(`/visitas/${visitaId}/incidencias`);
+    setIncidencias(data);
+  }
+
   useEffect(() => {
     load();
+    loadIncidencias();
   }, [visitaId]);
 
   useEffect(() => {
@@ -257,6 +314,32 @@ export function VisitaPage() {
     }
   }
 
+  async function submitIncidencia() {
+    if (!incidentForm.categoria) return toast.error("Selecciona una categoria");
+    if (!incidentForm.descripcion.trim()) return toast.error("Describe brevemente la incidencia");
+    setIncidentSaving(true);
+    try {
+      await api.post(`/visitas/${visitaId}/incidencias`, {
+        ...incidentForm,
+        latitud: coords?.latitud ?? null,
+        longitud: coords?.longitud ?? null,
+      });
+      toast.success("Reporte de calidad registrado");
+      setIncidentForm({
+        categoria: "FALTANTE_STOCK",
+        severidad: "MEDIA",
+        descripcion: "",
+        accion_tomada: "",
+        afecta_entrega: false,
+        cantidad_afectada: 0,
+        foto_base64: "",
+      });
+      await loadIncidencias();
+    } finally {
+      setIncidentSaving(false);
+    }
+  }
+
   if (!visita) {
     return <div className="h-80 rounded-md bg-white shadow-soft" />;
   }
@@ -384,6 +467,137 @@ export function VisitaPage() {
       ) : null}
 
       <ChecklistMicroTareas visitaId={visita.id} disabled={!visitInProgress} onProgress={setAllTasksDone} />
+
+      <section className="rounded-md border border-red-100 bg-white p-4 shadow-soft">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="flex items-center gap-2 text-lg font-bold text-ink">
+              <ClipboardPlus size={20} className="text-venado" />
+              Reporte de calidad/entrega
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">Registra defectos, faltantes o problemas encontrados en el PDV.</p>
+          </div>
+          <span className="rounded-md bg-red-50 px-2 py-1 text-xs font-bold text-venado">{incidencias.length} reporte(s)</span>
+        </div>
+
+        <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-bold uppercase text-slate-500">Tipo de defecto</span>
+              <select
+                value={incidentForm.categoria}
+                onChange={(event) => setIncidentForm((prev) => ({ ...prev, categoria: event.target.value }))}
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-sm"
+              >
+                {CATEGORIAS_INCIDENCIA.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase text-slate-500">Severidad</span>
+              <select
+                value={incidentForm.severidad}
+                onChange={(event) => setIncidentForm((prev) => ({ ...prev, severidad: event.target.value }))}
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-sm"
+              >
+                <option value="BAJA">Baja</option>
+                <option value="MEDIA">Media</option>
+                <option value="ALTA">Alta</option>
+              </select>
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="text-xs font-bold uppercase text-slate-500">Descripcion</span>
+            <textarea
+              value={incidentForm.descripcion}
+              onChange={(event) => setIncidentForm((prev) => ({ ...prev, descripcion: event.target.value }))}
+              className="mt-1 min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="Ej: exhibidor dañado, producto faltante, precio incorrecto..."
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-bold uppercase text-slate-500">Accion tomada</span>
+            <input
+              value={incidentForm.accion_tomada}
+              onChange={(event) => setIncidentForm((prev) => ({ ...prev, accion_tomada: event.target.value }))}
+              className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-sm"
+              placeholder="Ej: se informó al encargado, se reubicó material, pendiente reposición"
+            />
+          </label>
+
+          <div className="grid gap-2 sm:grid-cols-[1fr_130px]">
+            <label className="flex min-h-11 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={incidentForm.afecta_entrega}
+                onChange={(event) => setIncidentForm((prev) => ({ ...prev, afecta_entrega: event.target.checked }))}
+              />
+              Afecta la entrega o reposicion
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase text-slate-500">Cantidad</span>
+              <input
+                type="number"
+                min={0}
+                value={incidentForm.cantidad_afectada}
+                onChange={(event) =>
+                  setIncidentForm((prev) => ({ ...prev, cantidad_afectada: Number(event.target.value) || 0 }))
+                }
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-sm"
+              />
+            </label>
+          </div>
+
+          <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 text-sm font-bold text-slate-600">
+            <Camera size={18} />
+            {incidentForm.foto_base64 ? "Foto cargada" : "Adjuntar foto opcional"}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                const foto = await readFileAsBase64(file);
+                setIncidentForm((prev) => ({ ...prev, foto_base64: foto }));
+              }}
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={submitIncidencia}
+            disabled={incidentSaving}
+            className="touch-button inline-flex w-full items-center justify-center gap-2 rounded-md bg-venado px-4 py-3 font-bold text-white disabled:opacity-50"
+          >
+            <AlertTriangle size={19} />
+            {incidentSaving ? "Guardando reporte..." : "Guardar reporte de calidad"}
+          </button>
+        </div>
+
+        {incidencias.length ? (
+          <div className="mt-4 space-y-2">
+            {incidencias.map((item) => (
+              <article key={item.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-bold text-ink">{CATEGORIA_LABEL[item.categoria] || item.categoria}</p>
+                  <span className={`rounded px-2 py-1 text-xs font-bold ${item.severidad === "ALTA" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
+                    {item.severidad}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">{item.descripcion}</p>
+                {item.accion_tomada ? <p className="mt-1 text-xs text-slate-500">Accion: {item.accion_tomada}</p> : null}
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
 
       <button
         type="button"

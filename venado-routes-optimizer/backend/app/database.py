@@ -203,6 +203,40 @@ def create_bi_views() -> None:
             r.id, rep.supervisor, rep.nombre, mt.micro_tareas_total,
             mt.micro_tareas_completadas, mt.evidencias_fotos_total
         """,
+        f"""
+        CREATE OR REPLACE VIEW bi_incidencias AS
+        SELECT
+            r.fecha,
+            EXTRACT(YEAR FROM r.fecha)::int AS anio,
+            EXTRACT(MONTH FROM r.fecha)::int AS mes,
+            EXTRACT(WEEK FROM r.fecha)::int AS semana_iso,
+            {day_name} AS dia_semana,
+            ri.created_at AT TIME ZONE 'America/La_Paz' AS hora_reporte,
+            r.id::text AS ruta_id,
+            v.id::text AS visita_id,
+            ri.id::text AS incidencia_id,
+            rep.supervisor,
+            rep.nombre AS reponedor,
+            p.codigo AS pdv_codigo,
+            p.nombre AS pdv_nombre,
+            p.mercado,
+            p.tipo_cliente::text AS tipo_cliente,
+            ri.categoria,
+            ri.severidad,
+            ri.estado,
+            ri.afecta_entrega,
+            ri.cantidad_afectada,
+            ri.descripcion,
+            ri.accion_tomada,
+            ri.latitud,
+            ri.longitud,
+            ri.foto_url
+        FROM reporte_incidencia ri
+        JOIN visita v ON v.id = ri.visita_id
+        JOIN ruta r ON r.id = v.ruta_id
+        JOIN reponedor rep ON rep.id = ri.reponedor_id
+        JOIN pdv p ON p.id = ri.pdv_id
+        """,
     ]
     for statement in statements:
         with engine.begin() as conn:

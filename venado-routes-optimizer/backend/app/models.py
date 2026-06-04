@@ -143,6 +143,7 @@ class Visita(Base):
     ruta = relationship("Ruta", back_populates="visitas")
     pdv = relationship("PDV", back_populates="visitas")
     ejecuciones = relationship("EjecucionMicroTarea", back_populates="visita", cascade="all, delete-orphan")
+    incidencias = relationship("ReporteIncidencia", back_populates="visita", cascade="all, delete-orphan")
 
 
 class EjecucionMicroTarea(Base):
@@ -173,3 +174,26 @@ class HistorialTiempo(Base):
     semana_anio = Column(Integer, nullable=False, index=True)
 
     micro_tarea = relationship("MicroTarea")
+
+
+class ReporteIncidencia(Base, TimestampMixin):
+    __tablename__ = "reporte_incidencia"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    visita_id = Column(UUID(as_uuid=True), ForeignKey("visita.id"), nullable=False, index=True)
+    pdv_id = Column(UUID(as_uuid=True), ForeignKey("pdv.id"), nullable=False, index=True)
+    reponedor_id = Column(UUID(as_uuid=True), ForeignKey("reponedor.id"), nullable=False, index=True)
+    categoria = Column(String(80), index=True, nullable=False)
+    severidad = Column(String(20), default="MEDIA", index=True, nullable=False)
+    estado = Column(String(30), default="ABIERTO", index=True, nullable=False)
+    descripcion = Column(String(800), default="", nullable=False)
+    accion_tomada = Column(String(800), default="", nullable=False)
+    afecta_entrega = Column(Boolean, default=False, nullable=False)
+    cantidad_afectada = Column(Integer, default=0, nullable=False)
+    latitud = Column(Float, nullable=True)
+    longitud = Column(Float, nullable=True)
+    foto_url = Column(String(500), nullable=True)
+
+    visita = relationship("Visita", back_populates="incidencias")
+    pdv = relationship("PDV")
+    reponedor = relationship("Reponedor")

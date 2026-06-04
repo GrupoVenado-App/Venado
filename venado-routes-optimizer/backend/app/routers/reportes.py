@@ -7,11 +7,16 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
 from geoalchemy2.shape import to_shape
+from openpyxl import Workbook
+from openpyxl.chart import BarChart, LineChart, Reference
+from openpyxl.chart.label import DataLabelList
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.worksheet.table import Table, TableStyleInfo
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_role
 from app.database import get_db
-from app.models import EjecucionMicroTarea, Ruta, Visita, VisitaEstado
+from app.models import EjecucionMicroTarea, ReporteIncidencia, Ruta, Visita, VisitaEstado
 
 
 router = APIRouter(prefix="/reportes", tags=["reportes"])
@@ -117,6 +122,27 @@ RUTAS_HEADERS = [
     "evidencias_fotos_total",
 ]
 
+INCIDENCIAS_HEADERS = [
+    "fecha",
+    "hora_reporte",
+    "supervisor",
+    "reponedor",
+    "pdv_codigo",
+    "pdv_nombre",
+    "mercado",
+    "tipo_cliente",
+    "categoria",
+    "severidad",
+    "estado",
+    "afecta_entrega",
+    "cantidad_afectada",
+    "descripcion",
+    "accion_tomada",
+    "latitud",
+    "longitud",
+    "foto_url",
+]
+
 
 def _date_parts(value: date) -> dict:
     iso = value.isocalendar()
@@ -182,6 +208,24 @@ def _rutas_query(db: Session, fecha_desde: date | None, fecha_hasta: date | None
     if fecha_hasta:
         query = query.filter(Ruta.fecha <= fecha_hasta)
     return query.order_by(Ruta.fecha.desc(), Ruta.reponedor_id).all()
+
+
+def _incidencias_query(db: Session, fecha_desde: date | None, fecha_hasta: date | None):
+    query = (
+        db.query(ReporteIncidencia)
+        .options(
+            joinedload(ReporteIncidencia.visita).joinedload(Visita.ruta).joinedload(Ruta.reponedor),
+            joinedload(ReporteIncidencia.pdv),
+            joinedload(ReporteIncidencia.reponedor),
+        )
+        .join(Visita, Visita.id == ReporteIncidencia.visita_id)
+        .join(Ruta, Ruta.id == Visita.ruta_id)
+    )
+    if fecha_desde:
+        query = query.filter(Ruta.fecha >= fecha_desde)
+    if fecha_hasta:
+        query = query.filter(Ruta.fecha <= fecha_hasta)
+    return query.order_by(Ruta.fecha.desc(), ReporteIncidencia.created_at.desc()).all()
 
 
 def build_visitas_rows(visitas: list[Visita], request: Request) -> list[dict]:
@@ -327,6 +371,174 @@ def build_rutas_rows(rutas: list[Ruta]) -> list[dict]:
     return rows
 
 
+def build_incidencias_rows(incidencias: list[ReporteIncidencia], request: Request) -> list[dict]:
+    rows = []
+    for item in incidencias:
+        rows.append(
+            {
+                "fecha": item.visita.ruta.fecha.isoformat(),
+                "hora_reporte": _local_dt(item.created_at),
+                "supervisor": item.visita.ruta.reponedor.supervisor,
+                "reponedor": item.reponedor.nombre if item.reponedor else item.visita.ruta.reponedor.nombre,
+                "pdv_codigo": item.pdv.codigo,
+                "pdv_nombre": item.pdv.nombre,
+                "mercado": item.pdv.mercado,
+                "tipo_cliente": item.pdv.tipo_cliente.value,
+                "categoria": item.categoria,
+                "severidad": item.severidad,
+                "estado": item.estado,
+                "afecta_entrega": "SI" if item.afecta_entrega else "NO",
+                "cantidad_afectada": item.cantidad_afectada,
+                "descripcion": item.descripcion,
+                "accion_tomada": item.accion_tomada,
+                "latitud": item.latitud or "",
+                "longitud": item.longitud or "",
+                "foto_url": _absolute_url(request, item.foto_url),
+            }
+        )
+    return rows
+
+
+def _group_counts(rows: list[dict], key: str) -> list[dict]:
+    grouped: dict[str, int] = {}
+    for row in rows:
+        value = str(row.get(key) or "SIN_DATO")
+        grouped[value] = grouped.get(value, 0) + 1
+    ordered = sorted(grouped.items(), key=lambda item: item[1], reverse=True)
+    total = sum(value for _, value in ordered) or 1
+    cumulative = 0
+    result = []
+    for name, count in ordered:
+        cumulative += count
+        result.append({"nombre": name, "total": count, "acumulado_pct": round((cumulative / total) * 100, 2)})
+    return result
+
+
+def _style_header(row) -> None:
+    fill = PatternFill("solid", fgColor="C8102E")
+    for cell in row:
+        cell.fill = fill
+        cell.font = Font(color="FFFFFF", bold=True)
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+
+def _write_table(ws, title: str, headers: list[str], rows: list[dict], table_name: str) -> None:
+    ws["A1"] = title
+    ws["A1"].font = Font(size=16, bold=True, color="0F172A")
+    ws.append(headers)
+    _style_header(ws[2])
+    for row in rows:
+        ws.append([row.get(header, "") for header in headers])
+    if rows:
+        ref = f"A2:{ws.cell(row=ws.max_row, column=len(headers)).coordinate}"
+        table = Table(displayName=table_name, ref=ref)
+        table.tableStyleInfo = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False, showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+        ws.add_table(table)
+    ws.freeze_panes = "A3"
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col[:80])
+        ws.column_dimensions[col[0].column_letter].width = min(max(max_len + 2, 12), 34)
+
+
+def _add_pareto_sheet(wb: Workbook, name: str, rows: list[dict], title: str) -> None:
+    ws = wb.create_sheet(name)
+    safe_name = name.lower().replace(" ", "_").replace("-", "_")
+    _write_table(ws, title, ["nombre", "total", "acumulado_pct"], rows, f"tbl_{safe_name}")
+    if not rows:
+        return
+    max_row = ws.max_row
+    bar = BarChart()
+    bar.title = title
+    bar.y_axis.title = "Cantidad"
+    bar.x_axis.title = "Categoria"
+    bar.add_data(Reference(ws, min_col=2, min_row=2, max_row=max_row), titles_from_data=True)
+    bar.set_categories(Reference(ws, min_col=1, min_row=3, max_row=max_row))
+    bar.height = 9
+    bar.width = 18
+
+    line = LineChart()
+    line.add_data(Reference(ws, min_col=3, min_row=2, max_row=max_row), titles_from_data=True)
+    line.y_axis.axId = 200
+    line.y_axis.title = "Acumulado %"
+    line.y_axis.scaling.min = 0
+    line.y_axis.scaling.max = 100
+    line.dataLabels = DataLabelList()
+    line.dataLabels.showVal = False
+    bar += line
+    ws.add_chart(bar, "E3")
+
+
+def _xlsx_incidencias_response(rows: list[dict], filename: str) -> StreamingResponse:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Dashboard"
+    total = len(rows)
+    abiertas = sum(1 for row in rows if row.get("estado") == "ABIERTO")
+    altas = sum(1 for row in rows if row.get("severidad") == "ALTA")
+    afectan = sum(1 for row in rows if row.get("afecta_entrega") == "SI")
+
+    ws["A1"] = "Dashboard de incidencias - Industrias Venado"
+    ws["A1"].font = Font(size=18, bold=True, color="0F172A")
+    kpis = [
+        ("Total reportes", total),
+        ("Abiertos", abiertas),
+        ("Severidad alta", altas),
+        ("Afectan entrega", afectan),
+    ]
+    for index, (label, value) in enumerate(kpis, start=1):
+        col = 1 + (index - 1) * 3
+        ws.cell(row=3, column=col, value=label)
+        ws.cell(row=4, column=col, value=value)
+        ws.cell(row=3, column=col).font = Font(bold=True, color="64748B")
+        ws.cell(row=4, column=col).font = Font(size=20, bold=True, color="C8102E" if index in (2, 3, 4) else "174EA6")
+
+    categoria = _group_counts(rows, "categoria")
+    mercado = _group_counts(rows, "mercado")
+    severidad = _group_counts(rows, "severidad")
+    for title, data, start_col in [
+        ("Pareto categoria", categoria[:8], 1),
+        ("Top mercados", mercado[:8], 5),
+        ("Severidad", severidad[:5], 9),
+    ]:
+        ws.cell(row=7, column=start_col, value=title).font = Font(bold=True, color="0F172A")
+        ws.cell(row=8, column=start_col, value="nombre")
+        ws.cell(row=8, column=start_col + 1, value="total")
+        _style_header([ws.cell(row=8, column=start_col), ws.cell(row=8, column=start_col + 1)])
+        for offset, item in enumerate(data, start=9):
+            ws.cell(row=offset, column=start_col, value=item["nombre"])
+            ws.cell(row=offset, column=start_col + 1, value=item["total"])
+        if data:
+            chart = BarChart()
+            chart.title = title
+            chart.add_data(Reference(ws, min_col=start_col + 1, min_row=8, max_row=8 + len(data)), titles_from_data=True)
+            chart.set_categories(Reference(ws, min_col=start_col, min_row=9, max_row=8 + len(data)))
+            chart.height = 7
+            chart.width = 11
+            ws.add_chart(chart, ws.cell(row=17, column=start_col).coordinate)
+
+    ws.column_dimensions["A"].width = 24
+    ws.column_dimensions["B"].width = 12
+    ws.column_dimensions["E"].width = 24
+    ws.column_dimensions["F"].width = 12
+    ws.column_dimensions["I"].width = 18
+    ws.column_dimensions["J"].width = 12
+
+    detail = wb.create_sheet("Incidencias")
+    _write_table(detail, "Detalle de incidencias", INCIDENCIAS_HEADERS, rows, "tbl_incidencias")
+    _add_pareto_sheet(wb, "Pareto Categoria", categoria, "Pareto de defectos por categoria")
+    _add_pareto_sheet(wb, "Pareto Mercado", mercado, "Pareto de defectos por mercado")
+    _add_pareto_sheet(wb, "Severidad", severidad, "Distribucion por severidad")
+
+    output = io.BytesIO()
+    wb.save(output)
+    content = output.getvalue()
+    return StreamingResponse(
+        iter([content]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 def _csv_value(value) -> str | int | float:
     if isinstance(value, bool):
         return "SI" if value else "NO"
@@ -369,6 +581,18 @@ def exportar_bi(
 
     rows = build_visitas_rows(visitas, request)
     return _csv_response(rows, VISITAS_HEADERS, "venado_bi_visitas.csv")
+
+
+@router.get("/exportar-incidencias-excel")
+def exportar_incidencias_excel(
+    request: Request,
+    fecha_desde: date | None = None,
+    fecha_hasta: date | None = None,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("supervisor")),
+) -> StreamingResponse:
+    rows = build_incidencias_rows(_incidencias_query(db, fecha_desde, fecha_hasta), request)
+    return _xlsx_incidencias_response(rows, "venado_incidencias_calidad.xlsx")
 
 
 @router.get("/power-bi/visitas")

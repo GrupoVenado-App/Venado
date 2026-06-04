@@ -1,4 +1,4 @@
-import { Calendar, Download, FileSpreadsheet, ListChecks, Route } from "lucide-react";
+import { Calendar, Download, FileSpreadsheet, ListChecks, Route, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { api } from "../api/client";
@@ -43,6 +43,7 @@ export function BiExportPage() {
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [loading, setLoading] = useState<TablaBI | null>(null);
+  const [loadingExcel, setLoadingExcel] = useState(false);
 
   async function download(tabla: TablaBI, filename: string) {
     setLoading(tabla);
@@ -60,6 +61,27 @@ export function BiExportPage() {
       toast.success("CSV generado");
     } finally {
       setLoading(null);
+    }
+  }
+
+  async function downloadIncidenciasExcel() {
+    setLoadingExcel(true);
+    try {
+      const response = await api.get("/reportes/exportar-incidencias-excel", {
+        params: { fecha_desde: fechaDesde || undefined, fecha_hasta: fechaHasta || undefined },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "venado_incidencias_calidad.xlsx";
+      link.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Excel con Pareto generado");
+    } finally {
+      setLoadingExcel(false);
     }
   }
 
@@ -122,6 +144,31 @@ export function BiExportPage() {
             </article>
           );
         })}
+      </section>
+
+      <section className="rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-white text-venado">
+              <ShieldAlert size={22} />
+            </span>
+            <div>
+              <h3 className="font-bold text-slate-900">Incidencias de calidad con Pareto</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Excel con dashboard, detalle de reportes, Pareto por defecto, Pareto por mercado y severidad.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={downloadIncidenciasExcel}
+            disabled={loadingExcel}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-venado px-4 text-sm font-semibold text-white transition-colors hover:bg-skyroute disabled:opacity-50"
+          >
+            <FileSpreadsheet size={17} />
+            {loadingExcel ? "Generando..." : "Descargar Excel"}
+          </button>
+        </div>
       </section>
     </div>
   );

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_role
 from app.database import get_db
-from app.models import PDV, EjecucionMicroTarea, Reponedor, Ruta, RutaEstado, Visita, VisitaEstado
+from app.models import PDV, EjecucionMicroTarea, ReporteIncidencia, Reponedor, Ruta, RutaEstado, Visita, VisitaEstado
 from app.services.openrouteservice import get_ors_route_geometry
 
 
@@ -185,6 +185,69 @@ def desviaciones(
                 }
             )
     return result
+
+
+@router.get("/incidencias")
+def incidencias_calidad(
+    fecha: date | None = None,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("supervisor")),
+) -> dict:
+    target = fecha or date.today()
+    incidencias = (
+        db.query(ReporteIncidencia)
+        .options(
+            joinedload(ReporteIncidencia.visita).joinedload(Visita.ruta).joinedload(Ruta.reponedor),
+            joinedload(ReporteIncidencia.pdv),
+            joinedload(ReporteIncidencia.reponedor),
+        )
+        .join(Visita, Visita.id == ReporteIncidencia.visita_id)
+        .join(Ruta, Ruta.id == Visita.ruta_id)
+        .filter(Ruta.fecha == target)
+        .order_by(ReporteIncidencia.created_at.desc())
+        .all()
+    )
+
+    def count_by(key_fn):
+        grouped: dict[str, int] = {}
+        for item in incidencias:
+            key = key_fn(item) or "SIN_DATO"
+            grouped[key] = grouped.get(key, 0) + 1
+        return [{"nombre": key, "total": value} for key, value in sorted(grouped.items(), key=lambda row: row[1], reverse=True)]
+
+    rows = [
+        {
+            "id": str(item.id),
+            "fecha": item.visita.ruta.fecha.isoformat(),
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+            "reponedor": item.reponedor.nombre if item.reponedor else item.visita.ruta.reponedor.nombre,
+            "supervisor": item.visita.ruta.reponedor.supervisor,
+            "pdv_codigo": item.pdv.codigo,
+            "pdv_nombre": item.pdv.nombre,
+            "mercado": item.pdv.mercado,
+            "tipo_cliente": item.pdv.tipo_cliente.value,
+            "categoria": item.categoria,
+            "severidad": item.severidad,
+            "estado": item.estado,
+            "descripcion": item.descripcion,
+            "accion_tomada": item.accion_tomada,
+            "afecta_entrega": item.afecta_entrega,
+            "cantidad_afectada": item.cantidad_afectada,
+            "foto_url": item.foto_url,
+        }
+        for item in incidencias
+    ]
+    return {
+        "fecha": target.isoformat(),
+        "total": len(incidencias),
+        "abiertas": sum(1 for item in incidencias if item.estado == "ABIERTO"),
+        "criticas": sum(1 for item in incidencias if item.severidad == "ALTA"),
+        "afectan_entrega": sum(1 for item in incidencias if item.afecta_entrega),
+        "por_categoria": count_by(lambda item: item.categoria),
+        "por_mercado": count_by(lambda item: item.pdv.mercado),
+        "por_severidad": count_by(lambda item: item.severidad),
+        "incidencias": rows,
+    }
 
 
 @router.get("/por-mercado")

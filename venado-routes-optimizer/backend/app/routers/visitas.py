@@ -1,4 +1,7 @@
+import base64
 import math
+import os
+import uuid
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
@@ -7,14 +10,28 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_role
+from app.config import settings
 from app.database import get_db
-from app.models import EjecucionMicroTarea, HistorialTiempo, MicroTarea, Ruta, RutaEstado, Visita, VisitaEstado
-from app.schemas import LocationIn
+from app.models import EjecucionMicroTarea, HistorialTiempo, MicroTarea, ReporteIncidencia, Ruta, RutaEstado, Visita, VisitaEstado
+from app.schemas import IncidenciaIn, LocationIn
 from app.services.geocalc import DEPOT_LAT, DEPOT_LNG, haversine_meters, point_from_lng_lat
 from app.services.openrouteservice import estimate_leg, get_ors_route_geometry
 
 
 router = APIRouter(prefix="/visitas", tags=["visitas"])
+
+
+def save_incident_photo(foto_base64: str | None) -> str | None:
+    if not foto_base64:
+        return None
+    data = foto_base64.split(",", 1)[1] if "," in foto_base64 else foto_base64
+    raw = base64.b64decode(data)
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    filename = f"incidencia-{uuid.uuid4().hex}.jpg"
+    path = os.path.join(settings.upload_dir, filename)
+    with open(path, "wb") as handle:
+        handle.write(raw)
+    return f"/uploads/{filename}"
 
 
 def get_visita_or_404(db: Session, visita_id: UUID) -> Visita:
@@ -122,6 +139,26 @@ def serialize_visita(visita: Visita) -> dict:
             "longitud": visita.pdv.longitud,
             "tiempo_visita_estimado_min": visita.pdv.tiempo_visita_estimado_min,
         },
+    }
+
+
+def serialize_incidencia(incidencia: ReporteIncidencia) -> dict:
+    return {
+        "id": str(incidencia.id),
+        "visita_id": str(incidencia.visita_id),
+        "pdv_id": str(incidencia.pdv_id),
+        "reponedor_id": str(incidencia.reponedor_id),
+        "categoria": incidencia.categoria,
+        "severidad": incidencia.severidad,
+        "estado": incidencia.estado,
+        "descripcion": incidencia.descripcion,
+        "accion_tomada": incidencia.accion_tomada,
+        "afecta_entrega": incidencia.afecta_entrega,
+        "cantidad_afectada": incidencia.cantidad_afectada,
+        "latitud": incidencia.latitud,
+        "longitud": incidencia.longitud,
+        "foto_url": incidencia.foto_url,
+        "created_at": incidencia.created_at.isoformat() if incidencia.created_at else None,
     }
 
 
@@ -294,3 +331,51 @@ def micro_tareas_visita(
         }
         for item in ejecuciones
     ]
+
+
+@router.get("/{visita_id}/incidencias")
+def incidencias_visita(
+    visita_id: UUID,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("supervisor", "reponedor")),
+) -> list[dict]:
+    visita = get_visita_or_404(db, visita_id)
+    rows = (
+        db.query(ReporteIncidencia)
+        .filter(ReporteIncidencia.visita_id == visita.id)
+        .order_by(ReporteIncidencia.created_at.desc())
+        .all()
+    )
+    return [serialize_incidencia(row) for row in rows]
+
+
+@router.post("/{visita_id}/incidencias")
+def crear_incidencia_visita(
+    visita_id: UUID,
+    payload: IncidenciaIn,
+    db: Session = Depends(get_db),
+    user=Depends(require_role("reponedor")),
+) -> dict:
+    visita = get_visita_or_404(db, visita_id)
+    categoria = payload.categoria.strip().upper()
+    if not categoria:
+        raise HTTPException(status_code=400, detail="Debe seleccionar una categoria de incidencia")
+
+    incidencia = ReporteIncidencia(
+        visita_id=visita.id,
+        pdv_id=visita.pdv_id,
+        reponedor_id=user.id,
+        categoria=categoria,
+        severidad=payload.severidad.strip().upper() or "MEDIA",
+        descripcion=payload.descripcion.strip(),
+        accion_tomada=payload.accion_tomada.strip(),
+        afecta_entrega=payload.afecta_entrega,
+        cantidad_afectada=max(0, payload.cantidad_afectada or 0),
+        latitud=payload.latitud,
+        longitud=payload.longitud,
+        foto_url=save_incident_photo(payload.foto_base64),
+    )
+    db.add(incidencia)
+    db.commit()
+    db.refresh(incidencia)
+    return serialize_incidencia(incidencia)

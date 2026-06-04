@@ -99,6 +99,38 @@ class FotoIn(BaseModel):
     foto_base64: str | None = None
 
 
+class IncidenciaIn(BaseModel):
+    categoria: str
+    severidad: str = "MEDIA"
+    descripcion: str = ""
+    accion_tomada: str = ""
+    afecta_entrega: bool = False
+    cantidad_afectada: int = 0
+    latitud: float | None = None
+    longitud: float | None = None
+    foto_base64: str | None = None
+
+
+class IncidenciaOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    visita_id: UUID
+    pdv_id: UUID
+    reponedor_id: UUID
+    categoria: str
+    severidad: str
+    estado: str
+    descripcion: str
+    accion_tomada: str
+    afecta_entrega: bool
+    cantidad_afectada: int
+    latitud: float | None = None
+    longitud: float | None = None
+    foto_url: str | None = None
+    created_at: datetime
+
+
 class VisitaOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
