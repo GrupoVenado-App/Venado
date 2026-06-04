@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  ClipboardCheck,
   Download,
   FileText,
   GitBranch,
@@ -18,6 +19,7 @@ const links = [
   { to: "/dashboard/reponedores", label: "Reponedores", icon: Users },
   { to: "/dashboard/mercados", label: "Mercados", icon: BarChart3 },
   { to: "/dashboard/reportes", label: "Reportes", icon: FileText },
+  { to: "/dashboard/dmaic", label: "DMAIC", icon: ClipboardCheck },
   { to: "/dashboard/bi-export", label: "BI Export", icon: Download },
   { to: "/optimizador", label: "Optimizador", icon: GitBranch },
 ];

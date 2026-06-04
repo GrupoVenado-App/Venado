@@ -7,6 +7,7 @@ import { DashboardMapPage } from "./pages/DashboardMapPage";
 import { DashboardMercadosPage } from "./pages/DashboardMercadosPage";
 import { DashboardReponedoresPage } from "./pages/DashboardReponedoresPage";
 import { DashboardRutasPage } from "./pages/DashboardRutasPage";
+import { DmaicPage } from "./pages/DmaicPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OptimizadorPage } from "./pages/OptimizadorPage";
 import { ReponedorDetallePage } from "./pages/ReponedorDetallePage";
@@ -64,6 +65,7 @@ const router = createBrowserRouter([
       { path: "/dashboard/mercados", element: <DashboardMercadosPage /> },
       { path: "/dashboard/reportes", element: <ReportesPage /> },
       { path: "/dashboard/reportes/:reponedorId", element: <ReponedorDetallePage /> },
+      { path: "/dashboard/dmaic", element: <DmaicPage /> },
       { path: "/dashboard/bi-export", element: <BiExportPage /> },
       { path: "/optimizador", element: <OptimizadorPage /> },
     ],
